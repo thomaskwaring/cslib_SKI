@@ -77,6 +77,13 @@ inductive Red : SKI → SKI → Prop where
 
 open Red ReductionSystem
 
+lemma Red.ne {x y : SKI} : (x ⭢ y) → x ≠ y
+  | red_S _ _ _, h => by cases h
+  | red_K _ _, h => by cases h
+  | red_I _, h => by cases h
+  | red_head _ _ _ h', h => Red.ne h' (SKI.app.inj h).1
+  | red_tail _ _ _ h', h => Red.ne h' (SKI.app.inj h).2
+
 theorem MRed.S (x y z : SKI) : (S ⬝ x ⬝ y ⬝ z) ↠ (x ⬝ z ⬝ (y ⬝ z)) := MRed.single RedSKI <| red_S ..
 theorem MRed.K (x y : SKI) : (K ⬝ x ⬝ y) ↠ x := MRed.single RedSKI <| red_K ..
 theorem MRed.I (x : SKI) : (I ⬝ x) ↠ x := MRed.single RedSKI <| red_I ..
