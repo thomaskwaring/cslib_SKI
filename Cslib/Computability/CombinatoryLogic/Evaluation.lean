@@ -7,6 +7,8 @@ import Cslib.Computability.CombinatoryLogic.Defs
 import Cslib.Computability.CombinatoryLogic.Basic
 import Cslib.Computability.CombinatoryLogic.Confluence
 import Cslib.Computability.CombinatoryLogic.Recursion
+import Mathlib.Tactic.Common
+import Mathlib.Data.PFun
 
 /-!
 # Evaluation results
@@ -14,7 +16,9 @@ import Cslib.Computability.CombinatoryLogic.Recursion
 This file draws heavily from <https://gist.github.com/b-mehta/e412c837818223b8f16ca0b4aa19b166>.
 -/
 
-open SKI Red
+open SKI
+
+open Red ReductionSystem
 
 /-- The predicate that a term has no reducible sub-terms. -/
 def RedexFree : SKI → Prop
@@ -34,7 +38,8 @@ def RedexFree : SKI → Prop
 
 /--
 One-step evaluation as a function: either it returns a term that has been reduced by one step,
-or a proof that the term is redex free. Uses normal-order reduction.
+or a proof that the term is redex free. Uses normal-order reduction, ie reducing the leftmost
+redex at each step.
 -/
 def evalStep : (x : SKI) → PLift (RedexFree x) ⊕ SKI
   | S => Sum.inl (PLift.up trivial)
@@ -123,7 +128,7 @@ theorem RedexFree.no_red : {x : SKI} → RedexFree x → ∀ y, ¬ (x ⭢ y)
 theorem redexFree_iff {x : SKI} : RedexFree x ↔ ∀ y, ¬ (x ⭢ y) :=
   ⟨RedexFree.no_red, redexFree_of_no_red⟩
 
-theorem redexFree_iff_onceEval {x : SKI} : RedexFree x ↔ (evalStep x).isLeft = true := by
+theorem redexFree_iff_evalStep {x : SKI} : RedexFree x ↔ (evalStep x).isLeft = true := by
   constructor
   case mp =>
     intro h
@@ -136,7 +141,7 @@ theorem redexFree_iff_onceEval {x : SKI} : RedexFree x ↔ (evalStep x).isLeft =
     | Sum.inl h' => exact h'.down
     | Sum.inr y => rw [hx] at h; cases h
 
-instance : DecidablePred RedexFree := fun _ => decidable_of_iff' _ redexFree_iff_onceEval
+instance : DecidablePred RedexFree := fun _ => decidable_of_iff' _ redexFree_iff_evalStep
 
 /-- A term is redex free iff its only many-step reduction is itself. -/
 theorem redexFree_iff' {x : SKI} : RedexFree x ↔ ∀ y, (x ↠ y) ↔ x = y := by
@@ -182,8 +187,34 @@ lemma unique_normal_form' {x y : SKI} (h : CommonReduct x y)
     (hx : RedexFree x) (hy : RedexFree y) : x = y :=
   (redexFree_iff'.1 hx _).1 (commonReduct_redexFree hy h)
 
-/-! ### Injectivity for datatypes -/
 
+/-! ### Order of reductions -/
+
+/--
+Following Rosser, tag a reduction with the order of its redex, where head redexes have order
+zero.
+-/
+inductive OrderRed : Nat → SKI → SKI → Prop
+  | red_S {x y z : SKI} : OrderRed 0 (S ⬝ x ⬝ y ⬝ z) (x ⬝ z ⬝ (y ⬝ z))
+  | red_K {x y : SKI} : OrderRed 0 (K ⬝ x ⬝ y) x
+  | red_I {x : SKI} : OrderRed 0 (I ⬝ x) x
+  | red_head {n : Nat} {x x' y : SKI} : OrderRed n x x' → OrderRed n (x ⬝ y) (x' ⬝ y)
+  | red_tail {n : Nat} {x y y' : SKI} : OrderRed n y y' → OrderRed (n+1) (x ⬝ y) (x ⬝ y')
+
+/-- Possibly the `n` should be unique. -/
+theorem red_has_order {x y : SKI} (h : x ⭢ y) : ∃ n : Nat, OrderRed n x y := by
+  match h with
+  | red_S x y z => exact ⟨0, OrderRed.red_S⟩
+  | red_K x y => exact ⟨0, OrderRed.red_K⟩
+  | red_I x => exact ⟨0, OrderRed.red_I⟩
+  | red_head x x' y hx =>
+    obtain ⟨n, hx'⟩ := red_has_order hx
+    exact ⟨n, OrderRed.red_head hx'⟩
+  | red_tail x y y' hy =>
+    obtain ⟨n, hy'⟩ := red_has_order hy
+    exact ⟨n+1, OrderRed.red_tail hy'⟩
+
+/-! ### Injectivity for datatypes -/
 
 lemma sk_nequiv : ¬ CommonReduct S K := by
   intro ⟨z, hsz, hkz⟩
@@ -263,12 +294,10 @@ theorem rice {P : SKI} (hP : ∀ x : SKI, (P ⬝ x ↠ TT) ∨ P ⬝ x ↠ FF)
     (hxt : ∃ x : SKI, P ⬝ x ↠ TT) (hxf : ∃ x : SKI, P ⬝ x ↠ FF) : False := by
   obtain ⟨a, ha⟩ := hxt
   obtain ⟨b, hb⟩ := hxf
-  let Neg : SKI := S ⬝ (S ⬝ P ⬝ (K ⬝ b)) ⬝ (K ⬝ a)
+  let Neg : SKI := P ⬝' &0 ⬝' b ⬝' a |>.toSKI (n := 1)
   let Abs : SKI := Neg.fixedPoint
-  have Neg_app : ∀ x : SKI, Neg ⬝ x ↠ P ⬝ x ⬝ b ⬝ a := fun x => calc
-    _ ↠ S ⬝ P ⬝ (K ⬝ b) ⬝ x ⬝ ((K ⬝ a) ⬝ x) := MRed.S ..
-    _ ↠ P ⬝ x ⬝ (K ⬝ b ⬝ x) ⬝ a := by apply parallel_mRed; apply MRed.S; apply MRed.K
-    _ ↠ P ⬝ x ⬝ b ⬝ a := by apply MRed.head; apply MRed.tail; apply MRed.K
+  have Neg_app : ∀ x : SKI, Neg ⬝ x ↠ P ⬝ x ⬝ b ⬝ a :=
+    fun x => (P ⬝' &0 ⬝' b ⬝' a) |>.toSKI_correct (n := 1) [x] (by simp)
   cases hP Abs
   case inl h =>
     have : P ⬝ Abs ↠ FF := calc
@@ -286,3 +315,81 @@ theorem rice {P : SKI} (hP : ∀ x : SKI, (P ⬝ x ↠ TT) ∨ P ⬝ x ↠ FF)
       _ ↠ P ⬝ a := by apply MRed.tail; apply FF_correct
       _ ↠ TT := ha
     exact TF_nequiv <| MRed.diamond _ _ _ this h
+
+/-- **Rice's theorem**: any SKI predicate is trivial. -/
+theorem rice' {P : SKI} (hP : ∀ x : SKI, (P ⬝ x ↠ TT) ∨ P ⬝ x ↠ FF) :
+    (∀ x : SKI, P ⬝ x ↠ TT) ∨ (∀ x : SKI, P ⬝ x ↠ FF) := by
+  by_contra! h
+  obtain ⟨⟨a, ha⟩, b, hb⟩ := h
+  exact rice hP ⟨b, (hP _).resolve_right hb⟩ ⟨a, (hP _).resolve_left ha⟩
+
+
+/-! ### Evaluation as a partial map -/
+
+def evalNormalAux (x : SKI) : SKI ⊕ SKI :=
+  match evalStep x with
+  | Sum.inl _ => Sum.inl x
+  | Sum.inr y => Sum.inr y
+
+lemma evalNormalAux_left_eq (x y : SKI) (h : Sum.inl y = evalNormalAux x) : x = y := by
+  match hx : evalStep x with
+    | Sum.inl _ => symm; simpa [evalNormalAux, hx] using h
+    | Sum.inr _ => simp [evalNormalAux, hx] at h
+
+lemma evalNormalAux_left_redexFree (x y : SKI) (h : Sum.inl y = evalNormalAux x) :
+    RedexFree y := by
+  suffices evalStep x |>.isLeft by
+    exact evalNormalAux_left_eq x y h ▸ redexFree_iff_evalStep.mpr this
+  match hx : evalStep x with
+  | Sum.inl _ => trivial
+  | Sum.inr _ => simp [evalNormalAux, hx] at h
+
+lemma evalNormalAux_right_red (x y : SKI) (h : Sum.inr y = evalNormalAux x) : x ⭢ y := by
+  match hx : evalStep x with
+  | Sum.inl _ => simp [evalNormalAux, hx] at h
+  | Sum.inr y' =>
+    simp only [evalNormalAux, hx, Sum.inr.injEq] at h
+    exact h ▸ evalStep_right_correct x y' hx
+
+def evalNormal : SKI →. SKI := PFun.fix evalNormalAux
+
+theorem evalNormal_redexFree (x y : SKI) (h : y ∈ evalNormal x) : RedexFree y := by
+  refine PFun.fixInduction' h ?_ ?_
+  · intro a ha
+    apply evalNormalAux_left_redexFree a
+    simpa using ha
+  · tauto
+
+theorem reduces_to_evalNormal (x y : SKI) (h : y ∈ evalNormal x) : x ↠ y := by
+  refine PFun.fixInduction' h ?_ ?_
+  · intro a ha
+    suffices a = y by exact this ▸ MRed.refl RedSKI a
+    apply evalNormalAux_left_eq
+    simpa using ha
+  · intro a b _ hab hby
+    apply Relation.ReflTransGen.head (hbc := hby)
+    apply evalNormalAux_right_red
+    simpa using hab
+
+/--
+The so-called "standardization theorem", that normal-order reduction will find a normal form if
+there is one. The proof of Theorem T9 of Section C in *A Mathematical Logic Without Variables*
+(Rosser, 1935) should be amenable to formalization.
+-/
+theorem evalNormal_correct (x y : SKI) (hxy : x ↠ y) (hy : RedexFree y) : y ∈ evalNormal x := by
+  sorry
+
+/-! ### Evaluation for Church numerals -/
+
+def churchK_to_nat : SKI →. Nat
+  | K => Part.some 0
+  | K ⬝ x => churchK_to_nat x + Part.some 1
+  | _ => Part.none
+
+lemma churchK_to_nat_spec : (n : Nat) → n ∈ churchK_to_nat (churchK n)
+  | 0 => by simp!
+  | n+1 => by
+    simp! only
+    apply Part.add_mem_add
+    · exact churchK_to_nat_spec n
+    · simp
