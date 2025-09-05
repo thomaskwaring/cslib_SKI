@@ -57,6 +57,12 @@ lemma applyList_concat (f : SKI) (ys : List SKI) (z : SKI) :
     f.applyList (ys ++ [z]) = f.applyList ys ⬝ z := by
   simp [applyList]
 
+/-- The size of an SKI term is its number of combinators. -/
+def size : SKI → Nat
+  | S => 1
+  | K => 1
+  | I => 1
+  | x ⬝ y => size x + size y
 
 /-! ### Reduction relations between SKI terms -/
 
@@ -136,3 +142,9 @@ lemma commonReduct_of_single {a b : SKI} (h : a ↠ b) : CommonReduct a b := ⟨
 theorem symmetric_commonReduct : Symmetric CommonReduct := Relation.symmetric_join
 theorem reflexive_commonReduct : Reflexive CommonReduct := λ x => by
   refine ⟨x,?_,?_⟩ <;> rfl
+
+theorem commonReduct_head {x x' : SKI} (y : SKI) : CommonReduct x x' → CommonReduct (x ⬝ y) (x' ⬝ y)
+  | ⟨z, hz, hz'⟩ => ⟨z ⬝ y, MRed.head y hz, MRed.head y hz'⟩
+
+theorem commonReduct_tail (x : SKI) {y y' : SKI} : CommonReduct y y' → CommonReduct (x ⬝ y) (x ⬝ y')
+  | ⟨z, hz, hz'⟩ => ⟨x ⬝ z, MRed.tail x hz, MRed.tail x hz'⟩
