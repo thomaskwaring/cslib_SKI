@@ -12,6 +12,24 @@ import Mathlib.Tactic.Common
 /-!
 # Evaluation results
 
+This file formalises evaluation and normal forms of SKI terms.
+
+## Main definitions
+
+- `RedexFree` : a predicate expressing that a term has no redexes
+- `evalStep` : SKI-reduction as a function
+
+## Main results
+
+- `evalStep_right_correct` : correctness for `evalStep`
+- `redexFree_iff` and `redexFree_iff'` : a term is redex free if and only if it has (respectively)
+no one-step reductions, or if its only many step reduction is itself.
+- `unique_normal_form` : if `x` reduces to both `y` and `z`, and both `y` and `z` are in normal
+form, then they are equal.
+- **Rice's theorem**: no SKI term is a non-trivial predicate.
+
+## References
+
 This file draws heavily from <https://gist.github.com/b-mehta/e412c837818223b8f16ca0b4aa19b166>
 -/
 
@@ -124,7 +142,7 @@ theorem RedexFree.no_red : {x : SKI} → RedexFree x → ∀ y, ¬ (x ⭢ y)
 theorem redexFree_iff {x : SKI} : RedexFree x ↔ ∀ y, ¬ (x ⭢ y) :=
   ⟨RedexFree.no_red, redexFree_of_no_red⟩
 
-theorem redexFree_iff_onceEval {x : SKI} : RedexFree x ↔ (evalStep x).isLeft = true := by
+theorem redexFree_iff_evalStep {x : SKI} : RedexFree x ↔ (evalStep x).isLeft = true := by
   constructor
   case mp =>
     intro h
@@ -137,7 +155,7 @@ theorem redexFree_iff_onceEval {x : SKI} : RedexFree x ↔ (evalStep x).isLeft =
     | Sum.inl h' => exact h'.down
     | Sum.inr y => rw [hx] at h; cases h
 
-instance : DecidablePred RedexFree := fun _ => decidable_of_iff' _ redexFree_iff_onceEval
+instance : DecidablePred RedexFree := fun _ => decidable_of_iff' _ redexFree_iff_evalStep
 
 /-- A term is redex free iff its only many-step reduction is itself. -/
 theorem redexFree_iff' {x : SKI} : RedexFree x ↔ ∀ y, (x ↠ y) ↔ x = y := by
@@ -179,6 +197,7 @@ lemma unique_normal_form {x y z : SKI}
     (hxy : x ↠ y) (hxz : x ↠ z) (hy : RedexFree y) (hz : RedexFree z) : y = z :=
   (redexFree_iff'.1 hy _).1 (confluent_redexFree hxy hxz hz)
 
+/-- If `x` and `y` are normal and have a common reduct, then they are equal. -/
 lemma unique_normal_form' {x y : SKI} (h : CommonReduct x y)
     (hx : RedexFree x) (hy : RedexFree y) : x = y :=
   (redexFree_iff'.1 hx _).1 (commonReduct_redexFree hy h)
@@ -244,6 +263,7 @@ lemma churchK_size : (n : Nat) → (churchK n).size = n+1
 lemma churchK_injective : Function.Injective churchK :=
   fun n m h => by simpa using congrArg SKI.size h
 
+/-- Injectivity for Church numerals-/
 theorem isChurch_injective (x y : SKI) (n m : Nat) (hx : IsChurch n x) (hy : IsChurch m y)
     (hxy : CommonReduct x y) : n = m := by
   suffices CommonReduct (churchK n) (churchK m) by
