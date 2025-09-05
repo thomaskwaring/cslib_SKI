@@ -4,7 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Thomas Waring
 -/
 import Cslib.Computability.CombinatoryLogic.Defs
+import Cslib.Computability.CombinatoryLogic.Basic
 import Cslib.Computability.CombinatoryLogic.Confluence
+import Cslib.Computability.CombinatoryLogic.Recursion
+import Mathlib.Tactic.Common
 
 /-!
 # Evaluation results
@@ -176,4 +179,114 @@ lemma unique_normal_form {x y z : SKI}
     (hxy : x ↠ y) (hxz : x ↠ z) (hy : RedexFree y) (hz : RedexFree z) : y = z :=
   (redexFree_iff'.1 hy _).1 (confluent_redexFree hxy hxz hz)
 
-#check
+lemma unique_normal_form' {x y : SKI} (h : CommonReduct x y)
+    (hx : RedexFree x) (hy : RedexFree y) : x = y :=
+  (redexFree_iff'.1 hx _).1 (commonReduct_redexFree hy h)
+
+/-! ### Injectivity for datatypes -/
+
+lemma sk_nequiv : ¬ CommonReduct S K := by
+  intro ⟨z, hsz, hkz⟩
+  have hS : RedexFree S := by simp [RedexFree]
+  have hK : RedexFree K := by simp [RedexFree]
+  cases (redexFree_iff'.1 hS z).1 hsz
+  cases (redexFree_iff'.1 hK _).1 hkz
+
+/-- Injectivity for booleans. -/
+theorem isBool_injective (x y : SKI) (u v : Bool) (hx : IsBool u x) (hy : IsBool v y)
+    (hxy : CommonReduct x y) : u = v := by
+  have h : CommonReduct (if u then S else K) (if v then S else K) := by
+    apply commonReduct_equivalence.trans (y := x ⬝ S ⬝ K)
+    · apply commonReduct_equivalence.symm
+      apply commonReduct_of_single
+      exact hx S K
+    · apply commonReduct_equivalence.trans (y := y ⬝ S ⬝ K)
+      · exact commonReduct_head K <| commonReduct_head S hxy
+      · apply commonReduct_of_single
+        exact hy S K
+  by_cases u
+  case pos hu =>
+    by_cases v
+    case pos hv =>
+      rw [hu, hv]
+    case neg hv =>
+      simp_rw [hu, hv, Bool.false_eq_true, reduceIte] at h
+      exact False.elim <| sk_nequiv h
+  case neg hu =>
+    by_cases v
+    case pos hv =>
+      simp_rw [hu, hv, Bool.false_eq_true, reduceIte] at h
+      exact False.elim <| sk_nequiv (commonReduct_equivalence.symm h)
+    case neg hv =>
+      simp_rw [hu, hv]
+
+lemma TF_nequiv : ¬ CommonReduct TT FF := fun h =>
+  (Bool.eq_not_self true).mp <| isBool_injective TT FF true false TT_correct FF_correct h
+
+/-- A specialisation of `Church : Nat → SKI`. -/
+def churchK : Nat → SKI
+  | 0 => K
+  | n+1 => K ⬝ (churchK n)
+
+lemma churchK_church : (n : Nat) → churchK n = Church n K K
+  | 0 => rfl
+  | n+1 => by simp [churchK, Church, churchK_church n]
+
+lemma churchK_redexFree : (n : Nat) → RedexFree (churchK n)
+  | 0 => trivial
+  | n+1 => churchK_redexFree n
+
+@[simp]
+lemma churchK_size : (n : Nat) → (churchK n).size = n+1
+  | 0 => rfl
+  | n + 1 => by rw [churchK, size, size, churchK_size, Nat.add_comm]
+
+lemma churchK_injective : Function.Injective churchK :=
+  fun n m h => by simpa using congrArg SKI.size h
+
+theorem isChurch_injective (x y : SKI) (n m : Nat) (hx : IsChurch n x) (hy : IsChurch m y)
+    (hxy : CommonReduct x y) : n = m := by
+  suffices CommonReduct (churchK n) (churchK m) by
+    apply churchK_injective
+    exact unique_normal_form' this (churchK_redexFree n) (churchK_redexFree m)
+  apply commonReduct_equivalence.trans (y := x ⬝ K ⬝ K)
+  · simp_rw [churchK_church]
+    exact commonReduct_equivalence.symm <| commonReduct_of_single (hx K K)
+  · apply commonReduct_equivalence.trans (y := y ⬝ K ⬝ K)
+    · apply commonReduct_head; apply commonReduct_head; assumption
+    · simp_rw [churchK_church]
+      exact commonReduct_of_single (hy K K)
+
+/-- **Rice's theorem**: no SKI term is a non-trivial predicate. -/
+theorem rice {P : SKI} (hP : ∀ x : SKI, (P ⬝ x ↠ TT) ∨ P ⬝ x ↠ FF)
+    (hxt : ∃ x : SKI, P ⬝ x ↠ TT) (hxf : ∃ x : SKI, P ⬝ x ↠ FF) : False := by
+  obtain ⟨a, ha⟩ := hxt
+  obtain ⟨b, hb⟩ := hxf
+  let Neg : SKI := P ⬝' &0 ⬝' b ⬝' a |>.toSKI (n := 1)
+  let Abs : SKI := Neg.fixedPoint
+  have Neg_app : ∀ x : SKI, Neg ⬝ x ↠ P ⬝ x ⬝ b ⬝ a :=
+    fun x => (P ⬝' &0 ⬝' b ⬝' a) |>.toSKI_correct (n := 1) [x] (by simp)
+  cases hP Abs
+  case inl h =>
+    have : P ⬝ Abs ↠ FF := calc
+      _ ↠ P ⬝ (Neg ⬝ Abs) := by apply MRed.tail; apply fixedPoint_correct
+      _ ↠ P ⬝ (P ⬝ Abs ⬝ b ⬝ a) := by apply MRed.tail; apply Neg_app
+      _ ↠ P ⬝ (TT ⬝ b ⬝ a) := by apply MRed.tail; apply MRed.head; apply MRed.head; exact h
+      _ ↠ P ⬝ b := by apply MRed.tail; apply TT_correct
+      _ ↠ FF := hb
+    exact TF_nequiv <| MRed.diamond _ _ _ h this
+  case inr h =>
+    have : P ⬝ Abs ↠ TT := calc
+      _ ↠ P ⬝ (Neg ⬝ Abs) := by apply MRed.tail; apply fixedPoint_correct
+      _ ↠ P ⬝ (P ⬝ Abs ⬝ b ⬝ a) := by apply MRed.tail; apply Neg_app
+      _ ↠ P ⬝ (FF ⬝ b ⬝ a) := by apply MRed.tail; apply MRed.head; apply MRed.head; exact h
+      _ ↠ P ⬝ a := by apply MRed.tail; apply FF_correct
+      _ ↠ TT := ha
+    exact TF_nequiv <| MRed.diamond _ _ _ this h
+
+/-- **Rice's theorem**: any SKI predicate is trivial. -/
+theorem rice' {P : SKI} (hP : ∀ x : SKI, (P ⬝ x ↠ TT) ∨ P ⬝ x ↠ FF) :
+    (∀ x : SKI, P ⬝ x ↠ TT) ∨ (∀ x : SKI, P ⬝ x ↠ FF) := by
+  by_contra! h
+  obtain ⟨⟨a, ha⟩, b, hb⟩ := h
+  exact rice hP ⟨b, (hP _).resolve_right hb⟩ ⟨a, (hP _).resolve_left ha⟩
