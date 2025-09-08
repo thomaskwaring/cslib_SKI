@@ -7,9 +7,28 @@ import Cslib.Computability.CombinatoryLogic.Defs
 import Cslib.Computability.CombinatoryLogic.Basic
 import Cslib.Computability.CombinatoryLogic.Confluence
 import Cslib.Computability.CombinatoryLogic.Recursion
+import Mathlib.Tactic.Common
 
 /-!
 # Evaluation results
+
+This file formalises evaluation and normal forms of SKI terms.
+
+## Main definitions
+
+- `RedexFree` : a predicate expressing that a term has no redexes
+- `evalStep` : SKI-reduction as a function
+
+## Main results
+
+- `evalStep_right_correct` : correctness for `evalStep`
+- `redexFree_iff` and `redexFree_iff'` : a term is redex free if and only if it has (respectively)
+no one-step reductions, or if its only many step reduction is itself.
+- `unique_normal_form` : if `x` reduces to both `y` and `z`, and both `y` and `z` are in normal
+form, then they are equal.
+- **Rice's theorem**: no SKI term is a non-trivial predicate.
+
+## References
 
 This file draws heavily from <https://gist.github.com/b-mehta/e412c837818223b8f16ca0b4aa19b166>.
 -/
@@ -123,7 +142,7 @@ theorem RedexFree.no_red : {x : SKI} → RedexFree x → ∀ y, ¬ (x ⭢ y)
 theorem redexFree_iff {x : SKI} : RedexFree x ↔ ∀ y, ¬ (x ⭢ y) :=
   ⟨RedexFree.no_red, redexFree_of_no_red⟩
 
-theorem redexFree_iff_onceEval {x : SKI} : RedexFree x ↔ (evalStep x).isLeft = true := by
+theorem redexFree_iff_evalStep {x : SKI} : RedexFree x ↔ (evalStep x).isLeft = true := by
   constructor
   case mp =>
     intro h
@@ -136,7 +155,7 @@ theorem redexFree_iff_onceEval {x : SKI} : RedexFree x ↔ (evalStep x).isLeft =
     | Sum.inl h' => exact h'.down
     | Sum.inr y => rw [hx] at h; cases h
 
-instance : DecidablePred RedexFree := fun _ => decidable_of_iff' _ redexFree_iff_onceEval
+instance : DecidablePred RedexFree := fun _ => decidable_of_iff' _ redexFree_iff_evalStep
 
 /-- A term is redex free iff its only many-step reduction is itself. -/
 theorem redexFree_iff' {x : SKI} : RedexFree x ↔ ∀ y, (x ↠ y) ↔ x = y := by
@@ -178,12 +197,12 @@ lemma unique_normal_form {x y z : SKI}
     (hxy : x ↠ y) (hxz : x ↠ z) (hy : RedexFree y) (hz : RedexFree z) : y = z :=
   (redexFree_iff'.1 hy _).1 (confluent_redexFree hxy hxz hz)
 
+/-- If `x` and `y` are normal and have a common reduct, then they are equal. -/
 lemma unique_normal_form' {x y : SKI} (h : CommonReduct x y)
     (hx : RedexFree x) (hy : RedexFree y) : x = y :=
   (redexFree_iff'.1 hx _).1 (commonReduct_redexFree hy h)
 
 /-! ### Injectivity for datatypes -/
-
 
 lemma sk_nequiv : ¬ CommonReduct S K := by
   intro ⟨z, hsz, hkz⟩
@@ -244,6 +263,7 @@ lemma churchK_size : (n : Nat) → (churchK n).size = n+1
 lemma churchK_injective : Function.Injective churchK :=
   fun n m h => by simpa using congrArg SKI.size h
 
+/-- Injectivity for Church numerals-/
 theorem isChurch_injective (x y : SKI) (n m : Nat) (hx : IsChurch n x) (hy : IsChurch m y)
     (hxy : CommonReduct x y) : n = m := by
   suffices CommonReduct (churchK n) (churchK m) by
@@ -257,18 +277,15 @@ theorem isChurch_injective (x y : SKI) (n m : Nat) (hx : IsChurch n x) (hy : IsC
     · simp_rw [churchK_church]
       exact commonReduct_of_single (hy K K)
 
-
 /-- **Rice's theorem**: no SKI term is a non-trivial predicate. -/
 theorem rice {P : SKI} (hP : ∀ x : SKI, (P ⬝ x ↠ TT) ∨ P ⬝ x ↠ FF)
     (hxt : ∃ x : SKI, P ⬝ x ↠ TT) (hxf : ∃ x : SKI, P ⬝ x ↠ FF) : False := by
   obtain ⟨a, ha⟩ := hxt
   obtain ⟨b, hb⟩ := hxf
-  let Neg : SKI := S ⬝ (S ⬝ P ⬝ (K ⬝ b)) ⬝ (K ⬝ a)
+  let Neg : SKI := P ⬝' &0 ⬝' b ⬝' a |>.toSKI (n := 1)
   let Abs : SKI := Neg.fixedPoint
-  have Neg_app : ∀ x : SKI, Neg ⬝ x ↠ P ⬝ x ⬝ b ⬝ a := fun x => calc
-    _ ↠ S ⬝ P ⬝ (K ⬝ b) ⬝ x ⬝ ((K ⬝ a) ⬝ x) := MRed.S ..
-    _ ↠ P ⬝ x ⬝ (K ⬝ b ⬝ x) ⬝ a := by apply parallel_mRed; apply MRed.S; apply MRed.K
-    _ ↠ P ⬝ x ⬝ b ⬝ a := by apply MRed.head; apply MRed.tail; apply MRed.K
+  have Neg_app : ∀ x : SKI, Neg ⬝ x ↠ P ⬝ x ⬝ b ⬝ a :=
+    fun x => (P ⬝' &0 ⬝' b ⬝' a) |>.toSKI_correct (n := 1) [x] (by simp)
   cases hP Abs
   case inl h =>
     have : P ⬝ Abs ↠ FF := calc
@@ -286,3 +303,10 @@ theorem rice {P : SKI} (hP : ∀ x : SKI, (P ⬝ x ↠ TT) ∨ P ⬝ x ↠ FF)
       _ ↠ P ⬝ a := by apply MRed.tail; apply FF_correct
       _ ↠ TT := ha
     exact TF_nequiv <| MRed.diamond _ _ _ this h
+
+/-- **Rice's theorem**: any SKI predicate is trivial. -/
+theorem rice' {P : SKI} (hP : ∀ x : SKI, (P ⬝ x ↠ TT) ∨ P ⬝ x ↠ FF) :
+    (∀ x : SKI, P ⬝ x ↠ TT) ∨ (∀ x : SKI, P ⬝ x ↠ FF) := by
+  by_contra! h
+  obtain ⟨⟨a, ha⟩, b, hb⟩ := h
+  exact rice hP ⟨b, (hP _).resolve_right hb⟩ ⟨a, (hP _).resolve_left ha⟩
