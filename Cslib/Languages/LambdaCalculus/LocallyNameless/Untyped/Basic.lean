@@ -112,6 +112,8 @@ attribute [scoped grind] LC.fvar LC.app
 inductive Value : Term Var → Prop
 | abs (e : Term Var) : e.abs.LC → e.abs.Value
 
+attribute [scoped grind] Value
+
 section
 
 omit [HasFresh Var]

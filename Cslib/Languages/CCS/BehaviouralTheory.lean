@@ -116,9 +116,104 @@ theorem bisimilarity_nil_par : (par nil p) ~[lts (defs := defs)] p :=
 proof_wanted bisimilarity_par_assoc :
   (par p (par q r)) ~[lts (defs := defs)] (par (par p q) r)
 
+private inductive ParAssoc : (Process Name Constant) → (Process Name Constant) → Prop where
+  | assoc : ParAssoc (par p (par q r)) (par (par p q) r)
+  | id : ParAssoc p p
+
+-- I think this is not true as stated (ie with the current relation ParAssoc)
+theorem bisimilarity_par_assoc :
+  (par p (par q r)) ~[lts (defs := defs)] (par (par p q) r) := by
+  refine ⟨ParAssoc, ParAssoc.assoc, ?_⟩
+  intro s1 s2 hr μ
+  apply And.intro <;> cases hr
+  case right.assoc =>
+    intro s2' htr
+    unfold lts at *
+    cases htr
+    case parL htr =>
+      cases htr
+      case parL p q r p' _ =>
+        exists p'.par (q.par r)
+        grind [Tr.parL, ParAssoc]
+      case parR p q r q' _ =>
+        exists p.par (q'.par r)
+        grind [Tr.parL, Tr.parR, ParAssoc]
+      case com p q r μ p' q' _ _ =>
+        exists p'.par (q'.par r)
+        grind [Tr.com, Tr.parL, ParAssoc]
+    case parR p q r r' htr =>
+      exists p.par (q.par r')
+      grind [Tr.parR, ParAssoc]
+    case com p q r μ p' r' htr htr' =>
+      cases htr
+      case parL p' _ =>
+        exists p'.par (q.par r')
+        grind [Tr.parR, Tr.com, ParAssoc]
+      case parR q' _ =>
+        exists p.par (q'.par r')
+        grind [Tr.parR, Tr.com, ParAssoc]
+      case com μ p' q' _ _ =>
+        sorry
+  case left.assoc =>
+    intro s2' htr
+    unfold lts at *
+    cases htr
+    case parR htr =>
+      cases htr
+      case parL p q r q' _ =>
+        exists (p.par q').par r
+        grind [Tr.parL, Tr.parR, ParAssoc]
+      case parR p q r r' _ =>
+        exists (p.par q).par r'
+        grind [Tr.parL, Tr.parR, ParAssoc]
+      case com p q r μ q' r' _ _ =>
+        exists (p.par q').par r'
+        constructor
+        · apply Tr.com (μ := μ)
+          · apply Tr.parR; assumption
+          · assumption
+        · exact ParAssoc.assoc
+    case parL p q r p' htr =>
+      exists (p'.par q).par r
+      grind [Tr.parL, ParAssoc]
+    case com p q r μ p' r' htr htr' =>
+      cases μ <;> rw [Act.co] at htr'
+      case τ =>
+        cases htr'
+        case parL q' _ =>
+          use (p'.par q').par r
+          grind [Tr.parL, Tr.com, Act.co, ParAssoc]
+        case parR r' _ =>
+          refine ⟨(p'.par q).par r', ?_, ParAssoc.assoc⟩
+          apply Tr.com (μ := τ) <;> grind [Tr.parL, Act.co]
+          -- need the apply here bc grind doesn't see that τ = τ.co in order to pattern match
+          -- for Tr.com
+        case com q' r' _ _=>
+          sorry
+      all_goals sorry
+  all_goals grind [ParAssoc]
+
+
+private inductive ChoiceNil : (Process Name Constant) → (Process Name Constant) → Prop where
+  | nil : ChoiceNil (choice p nil) p
+  | id : ChoiceNil p p
+
 /-- P + 𝟎 ~ P -/
-proof_wanted bisimilarity_choice_nil :
-  (choice p nil) ~[lts (defs := defs)] p
+theorem bisimilarity_choice_nil : (choice p nil) ~[lts (defs := defs)] p := by
+  refine ⟨ChoiceNil, ChoiceNil.nil, ?_⟩
+  intro s1 s2 hr μ
+  apply And.intro <;> cases hr
+  case left.nil =>
+    unfold lts
+    grind [cases Tr, ChoiceNil]
+  case right.nil =>
+    intro s2' htr
+    exists s2'
+    constructor
+    · apply Tr.choiceL
+      assumption
+    · exact ChoiceNil.id
+  all_goals grind [ChoiceNil]
 
 private inductive ChoiceIdem : (Process Name Constant) → (Process Name Constant) → Prop where
   | idem : ChoiceIdem (choice p p) p
