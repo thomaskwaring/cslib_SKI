@@ -79,7 +79,7 @@ theorem bisimilarity_par_comm : (par p q) ~[lts (defs := defs)] (par q p) := by
           constructor
           · apply Tr.parL htr'
           · constructor
-        case com μ p' q' htrp htrq =>
+        case com _ p' q' μ htrp htrq =>
           exists (par q' p')
           constructor
           · rw [← Act.co.involution Name μ] at htrp
@@ -98,7 +98,7 @@ theorem bisimilarity_par_comm : (par p q) ~[lts (defs := defs)] (par q p) := by
           constructor
           · apply Tr.parL htr'
           · constructor
-        case com μ p' q' htrp htrq =>
+        case com _ p' q' μ htrp htrq =>
           exists (par q' p')
           constructor
           · rw [← Act.co.involution Name μ] at htrp
@@ -138,22 +138,22 @@ theorem bisimilarity_par_assoc :
       case parR p q r q' _ =>
         exists p.par (q'.par r)
         grind [Tr.parL, Tr.parR, ParAssoc]
-      case com p q r μ p' q' _ _ =>
+      case com p q r p' q' μ _ _ =>
         exists p'.par (q'.par r)
         grind [Tr.com, Tr.parL, ParAssoc]
     case parR p q r r' htr =>
       exists p.par (q.par r')
       grind [Tr.parR, ParAssoc]
-    case com p q r μ p' r' htr htr' =>
-      cases htr
-      case parL p' _ =>
-        exists p'.par (q.par r')
-        grind [Tr.parR, Tr.com, ParAssoc]
-      case parR q' _ =>
-        exists p.par (q'.par r')
-        grind [Tr.parR, Tr.com, ParAssoc]
-      case com μ p' q' _ _ =>
-        sorry
+    case com p q r p' r' μ htr htr' =>
+      sorry
+      -- case parL p' _ =>
+      --   exists p'.par (q.par r')
+      --   grind [Tr.parR, Tr.com, ParAssoc]
+      -- case parR q' _ =>
+      --   exists p.par (q'.par r')
+      --   grind [Tr.parR, Tr.com, ParAssoc]
+    --   case com μ p' q' _ _ =>
+    --     sorry
   case left.assoc =>
     intro s2' htr
     unfold lts at *
@@ -166,7 +166,7 @@ theorem bisimilarity_par_assoc :
       case parR p q r r' _ =>
         exists (p.par q).par r'
         grind [Tr.parL, Tr.parR, ParAssoc]
-      case com p q r μ q' r' _ _ =>
+      case com p q r q' r' μ _ _ =>
         exists (p.par q').par r'
         constructor
         · apply Tr.com (μ := μ)
@@ -177,20 +177,20 @@ theorem bisimilarity_par_assoc :
       exists (p'.par q).par r
       grind [Tr.parL, ParAssoc]
     case com p q r μ p' r' htr htr' =>
-      cases μ <;> rw [Act.co] at htr'
-      case τ =>
-        cases htr'
-        case parL q' _ =>
-          use (p'.par q').par r
-          grind [Tr.parL, Tr.com, Act.co, ParAssoc]
-        case parR r' _ =>
-          refine ⟨(p'.par q).par r', ?_, ParAssoc.assoc⟩
-          apply Tr.com (μ := τ) <;> grind [Tr.parL, Act.co]
-          -- need the apply here bc grind doesn't see that τ = τ.co in order to pattern match
-          -- for Tr.com
-        case com q' r' _ _=>
-          sorry
-      all_goals sorry
+      -- cases htr'
+      -- cases μ <;> rw [Act.co] at htr'
+      -- case τ =>
+      --   cases htr'
+      --   case parL q' _ =>
+      --     use (p'.par q').par r
+      --     grind [Tr.parL, Tr.com, Act.co, ParAssoc]
+      --   case parR r' _ =>
+      --     refine ⟨(p'.par q).par r', ?_, ParAssoc.assoc⟩
+      --     apply Tr.com (μ := τ) <;> grind [Tr.parL, Act.co]
+      --     -- need the apply here bc grind doesn't see that τ = τ.co in order to pattern match
+      --     -- for Tr.com
+      --   case com q' r' _ _=>
+      sorry
   all_goals grind [ParAssoc]
 
 
@@ -481,7 +481,7 @@ theorem bisimilarity_congr_par :
         · apply Tr.parR htr
         · constructor
           apply Bisimilarity.largest_bisimulation _ hb hr
-      case com μ' p' r' htrp htrr =>
+      case com _ p' r' μ htrp htrr =>
         obtain ⟨q', htr2, hr2⟩ := hb.follow_fst hr htrp
         exists (par q' r')
         constructor
@@ -507,7 +507,7 @@ theorem bisimilarity_congr_par :
         · apply Tr.parR htr
         · constructor
           apply Bisimilarity.largest_bisimulation _ hb hr
-      case com μ' p' r' htrq htrr =>
+      case com _ p' r' μ htrq htrr =>
         obtain ⟨q', htr2, hr2⟩ := hb.follow_snd hr htrq
         exists (par q' r')
         constructor
