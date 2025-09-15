@@ -62,9 +62,7 @@ inductive Typing : Term Var → Ty Base → Context Var (List (LTy Base)) → Ty
 
 scoped notation:50 Γ " ⊢' " t " ∶ " A:arg => Typing t A Γ
 
-variable {Γ : Context Var (List (LTy Base))} {A C : LTy Base}
-
-[HasFresh Var]
+variable {Γ : Context Var (List (LTy Base))} {A C : LTy Base} [HasFresh Var]
 
 example (D : Typing (abs (bvar 0)) (lin C) Γ) : ∃ B : LTy Base, C = [B] ⊸ B := by
   cases D
@@ -74,12 +72,6 @@ example (D : Typing (abs (bvar 0)) (lin C) Γ) : ∃ B : LTy Base, C = [B] ⊸ B
     cases h
     use A
 
--- example (D : Typing (abs (app (bvar 0) (bvar 0))) (lin C) Γ) :
---     ∃ (M : List (LTy Base)) (B : LTy Base), C = ((M ⊸ B) :: M) ⊸ B := by
---   cases D
---   case abs N A L h =>
---     replace h := h (fresh L) (fresh_notMem L)
---     cases h
 
 
 end Niit

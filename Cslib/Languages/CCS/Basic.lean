@@ -65,6 +65,18 @@ def VisibleAct.co (μ : VisibleAct Name) : VisibleAct Name :=
 /-- `Act.co` is an involution. -/
 theorem Act.co.involution (μ : VisibleAct Name) : μ.co.co = μ := by grind
 
+@[grind]
+def Act.IsDual {Name : Type u} [DecidableEq Name] : Act Name → Act Name → Prop
+  | name a, coname b => a = b
+  | coname a, name b => a = b
+  | _, _ => False
+
+@[grind]
+theorem Act.IsDual.comm [DecidableEq Name] (μ μ' : Act Name) (h : Act.IsDual μ μ') :
+    μ'.IsDual μ := by
+  unfold Act.IsDual at *
+  grind
+
 /-- Contexts. -/
 inductive Context : Type (max u v) where
   | hole
