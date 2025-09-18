@@ -235,6 +235,12 @@ theorem equivalent_trans {A B C : Proposition Atom} :
 theorem equivalent_equivalence : Equivalence (IPL.NJ.Equivalent (Atom := Atom)) :=
   ⟨equivalent_refl, equivalent_comm, equivalent_trans⟩
 
+/-!
+### Negation theorems
+
+The following are valid in minimal logic, so we use `impl (-) C` over `~(-) := impl (-) bot`.
+-/
+
 /-- Double negation introduction -/
 def Derivation.dni {A B : Proposition Atom} : Derivation ⟨{A},impl (impl A B) B⟩ := by
   apply implI (A := A.impl B)
@@ -248,6 +254,20 @@ def Derivation.dni' {Γ : Ctx Atom} {A B : Proposition Atom} (D : Derivation ⟨
 
 theorem Derivable.dni' {Γ : Ctx Atom} {A B : Proposition Atom} (h : Derivable ⟨Γ, A⟩) :
     Derivable ⟨Γ, impl (impl A B) B⟩ := let ⟨D⟩ := h; ⟨D.dni'⟩
+
+def Derivation.notNotLEM {A B : Proposition Atom} :
+    Derivation ⟨∅, (A.disj <| impl A B).impl B |>.impl B⟩ := by
+  apply implI
+  rw [insert_empty_eq]
+  apply implE (A := A.disj (A.impl B)) (ax' <| by grind)
+  apply disjI₂
+  apply implI
+  apply implE (A := A.disj (A.impl B)) (ax' <| by grind)
+  apply disjI₁
+  apply ax' <| by grind
+
+theorem Derivable.not_not_lem {A B : Proposition Atom} :
+    Derivable ⟨∅, (A.disj <| impl A B).impl B |>.impl B⟩ := ⟨Derivation.notNotLEM⟩
 
 /-- Triple negation elimination -/
 def Derivation.tne {A B : Proposition Atom} :
@@ -291,8 +311,7 @@ theorem Derivable.modus_tollens' {Γ : Ctx Atom} {A B : Proposition Atom} (C : P
 /-!
 ### De Morgan laws
 
-We generalize ~(-) etc to `impl (-) C` as we do not use `botE`. Therefore, the following are valid
-in minimal logic.
+The following are valid in minimal logic, so we use `impl (-) C` over `~(-) := impl (-) bot`.
 -/
 
 def disjImpOfConjImps {A B C : Proposition Atom} :
