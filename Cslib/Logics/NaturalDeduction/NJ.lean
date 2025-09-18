@@ -68,14 +68,16 @@ inductive Derivation : Sequent Atom → Type _ where
   | implE {Γ : Ctx Atom} {A B : Proposition Atom} :
       Derivation ⟨Γ, impl A B⟩ → Derivation ⟨Γ, A⟩ → Derivation ⟨Γ, B⟩
 
-inductive Derivable (S : Sequent Atom) : Prop where
-  | der (_ : Derivation S) : Derivable S
+def Derivable (S : Sequent Atom) := Nonempty (Derivation S)
 
-protected structure Equivalent (A B : Proposition Atom) : Prop where
-  mp : Derivable ⟨{A}, B⟩
-  mpr : Derivable ⟨{B},A⟩
+def Proposition.equiv (A B : Proposition Atom) := Derivation ⟨{A},B⟩ × Derivation ⟨{B},A⟩
+def Proposition.Equiv (A B : Proposition Atom) := Derivable ⟨{A},B⟩ ∧ Derivable ⟨{B},A⟩
 
-open Derivation Derivable
+-- protected structure Equivalent (A B : Proposition Atom) : Prop where
+--   mp : Derivable ⟨{A}, B⟩
+--   mpr : Derivable ⟨{B},A⟩
+
+open Derivation
 
 def Derivation.size {S : Sequent Atom} : Derivation S → Nat
   | ax _ _ => 1
@@ -121,7 +123,7 @@ def Derivation.weak {Γ : Ctx Atom} {A : Proposition Atom} (Δ : Ctx Atom)
 theorem Derivable.weak {Γ : Ctx Atom} {A : Proposition Atom} (Δ : Ctx Atom)
     (h : Derivable ⟨Γ, A⟩) : Derivable ⟨Γ ∪ Δ, A⟩ := by
   let ⟨D⟩ := h
-  exact Derivable.der <| D.weak Δ
+  exact ⟨D.weak Δ⟩
 
 def Derivation.weak' {Γ Δ : Ctx Atom} {A : Proposition Atom} (h : Γ ⊆ Δ) (D : Derivation ⟨Γ, A⟩) :
     Derivation ⟨Δ, A⟩ := Finset.union_sdiff_of_subset h ▸ D.weak (Δ \ Γ)
@@ -129,7 +131,7 @@ def Derivation.weak' {Γ Δ : Ctx Atom} {A : Proposition Atom} (h : Γ ⊆ Δ) (
 theorem Derivable.weak' {Γ Δ : Ctx Atom} {A : Proposition Atom} (h_ext : Γ ⊆ Δ)
     (h : Derivable ⟨Γ, A⟩) : Derivable ⟨Δ, A⟩ := by
   let ⟨D⟩ := h
-  exact Derivable.der <| D.weak' h_ext
+  exact ⟨D.weak' h_ext⟩
 
 /-- Substitution -/
 def Derivation.subs {Γ Δ : Ctx Atom} {A B : Proposition Atom}
@@ -187,9 +189,8 @@ def Derivation.subs {Γ Δ : Ctx Atom} {A B : Proposition Atom}
   | implE D D' => exact implE (D.subs E) (D'.subs E)
 
 theorem Derivable.subs {Γ Δ : Ctx Atom} {A B : Proposition Atom}
-    (h₁ : Derivable ⟨Γ, B⟩) (h₂ : Derivable ⟨Δ, A⟩) : Derivable ⟨(Γ \ {A}) ∪ Δ, B⟩ := by
-  let ⟨D⟩ := h₁; let ⟨E⟩ := h₂
-  exact Derivable.der <| D.subs E
+    (h₁ : Derivable ⟨Γ, B⟩) (h₂ : Derivable ⟨Δ, A⟩) : Derivable ⟨(Γ \ {A}) ∪ Δ, B⟩ :=
+  let ⟨D⟩ := h₁; let ⟨E⟩ := h₂; ⟨D.subs E⟩
 
 def Derivation.subs' {Γ : Ctx Atom} {A B : Proposition Atom}
     (D : Derivation ⟨{A}, B⟩) (E : Derivation ⟨Γ, A⟩) : Derivation ⟨Γ, B⟩ := by
@@ -203,10 +204,20 @@ theorem Derivable.subs' {Γ : Ctx Atom} {A B : Proposition Atom}
 
 /-! ### Properties of NJ-equivalence -/
 
-theorem equivalent_derivability (Γ : Ctx Atom) {A B : Proposition Atom} (h : IPL.NJ.Equivalent A B)
-    : Derivable ⟨Γ, A⟩ ↔ Derivable ⟨Γ, B⟩ := ⟨h.mp.subs', h.mpr.subs'⟩
+def mapEquivConclusion (Γ : Ctx Atom) {A B : Proposition Atom} (e : Proposition.equiv A B) :
+    Derivation ⟨Γ, A⟩ → Derivation ⟨Γ, B⟩ := e.1.subs'
 
-theorem equivalent_hypotheses (Γ : Ctx Atom) {A B : Proposition Atom} (h : IPL.NJ.Equivalent A B)
+theorem equivalent_derivability (Γ : Ctx Atom) {A B : Proposition Atom} (h : Proposition.Equiv A B)
+    : Derivable ⟨Γ, A⟩ ↔ Derivable ⟨Γ, B⟩ := ⟨h.1.subs', h.2.subs'⟩
+
+def mapEquivHypothesis (Γ : Ctx Atom) {A B : Proposition Atom} (e : Proposition.equiv A B)
+    (C : Proposition Atom) (D : Derivation ⟨insert A Γ, C⟩) : Derivation ⟨insert B Γ, C⟩ := by
+  have : insert B Γ = (insert A Γ \ {A}) ∪ (insert B Γ) := by grind
+  rw [this]
+  refine D.subs ?_
+  exact e.2.weak' (by grind)
+
+theorem equivalent_hypotheses (Γ : Ctx Atom) {A B : Proposition Atom} (h : Proposition.Equiv A B)
     (C : Proposition Atom) : Derivable ⟨insert A Γ, C⟩ ↔ Derivable ⟨insert B Γ, C⟩ := by
   let ⟨⟨D⟩, ⟨D'⟩⟩ := h
   constructor
@@ -221,18 +232,28 @@ theorem equivalent_hypotheses (Γ : Ctx Atom) {A B : Proposition Atom} (h : IPL.
     refine ⟨DB.subs ?_⟩
     exact D.weak' (by grind)
 
-theorem equivalent_refl (A : Proposition Atom) : IPL.NJ.Equivalent A A := by
+def reflEquiv (A : Proposition Atom) : Proposition.equiv A A :=
+  let D : Derivation ⟨{A},A⟩ := ax' <| by grind;
+  ⟨D,D⟩
+
+def commEquiv {A B : Proposition Atom} (e : Proposition.equiv A B) : Proposition.equiv B A :=
+  ⟨e.2, e.1⟩
+
+def transEquiv {A B C : Proposition Atom} (e : Proposition.Equiv A B) (e' : Proposition.Equiv B C) :
+    Proposition.Equiv A C := ⟨e'.1.subs' e.1, e.2.subs' e'.2⟩
+
+theorem equivalent_refl (A : Proposition Atom) : Proposition.Equiv A A := by
   have : Derivable ⟨{A},A⟩ := ⟨ax' <| by grind⟩
-  grind [IPL.NJ.Equivalent]
+  grind [Proposition.Equiv]
 
 theorem equivalent_comm {A B : Proposition Atom} :
-    IPL.NJ.Equivalent A B → IPL.NJ.Equivalent B A := by grind [IPL.NJ.Equivalent]
+    Proposition.Equiv A B → Proposition.Equiv B A := by grind [Proposition.Equiv]
 
 theorem equivalent_trans {A B C : Proposition Atom} :
-    IPL.NJ.Equivalent A B → IPL.NJ.Equivalent B C → IPL.NJ.Equivalent A C := by
-  grind [IPL.NJ.Equivalent, Derivable.subs']
+    Proposition.Equiv A B → Proposition.Equiv B C → Proposition.Equiv A C := by
+  grind [Proposition.Equiv, Derivable.subs']
 
-theorem equivalent_equivalence : Equivalence (IPL.NJ.Equivalent (Atom := Atom)) :=
+theorem equivalent_equivalence : Equivalence (Proposition.Equiv (Atom := Atom)) :=
   ⟨equivalent_refl, equivalent_comm, equivalent_trans⟩
 
 /-!
@@ -279,8 +300,11 @@ def Derivation.tne {A B : Proposition Atom} :
 theorem Derivable.tne {A B : Proposition Atom} :
     Derivable ⟨{((A.impl B).impl B).impl B}, A.impl B⟩ := ⟨Derivation.tne⟩
 
+def tneEquiv {A B : Proposition Atom} :
+    Proposition.equiv (A.impl B) (((A.impl B).impl B).impl B) := ⟨Derivation.dni, Derivation.tne⟩
+
 theorem tne_equivalent {A B : Proposition Atom} :
-    IPL.NJ.Equivalent (A.impl B) (((A.impl B).impl B).impl B) := ⟨Derivable.dni, Derivable.tne⟩
+    Proposition.Equiv (A.impl B) (((A.impl B).impl B).impl B) := ⟨Derivable.dni, Derivable.tne⟩
 
 /-- Modus tollens -/
 def Derivation.modusTollens {A B : Proposition Atom} (C : Proposition Atom)
@@ -348,8 +372,12 @@ def conjImpsOfDisjImp {A B C : Proposition Atom} :
 theorem conj_imps_of_disj_imp {A B C : Proposition Atom} :
     Derivable ⟨{impl (disj A B) C}, conj (impl A C) (impl B C)⟩ := ⟨conjImpsOfDisjImp⟩
 
+def disjImpConjImpsEquiv {A B C : Proposition Atom} :
+    Proposition.equiv (impl (disj A B) C) (conj (impl A C) (impl B C)) :=
+  ⟨conjImpsOfDisjImp, disjImpOfConjImps⟩
+
 theorem disj_imp_conj_imps_equivalent {A B C : Proposition Atom} :
-    IPL.NJ.Equivalent (impl (disj A B) C) (conj (impl A C) (impl B C)) :=
+    Proposition.Equiv (impl (disj A B) C) (conj (impl A C) (impl B C)) :=
   ⟨conj_imps_of_disj_imp, disj_imp_of_conj_imps⟩
 
 def conjImpOfDisjImps {A B C : Proposition Atom} :
