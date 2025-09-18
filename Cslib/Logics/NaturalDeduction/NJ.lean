@@ -70,12 +70,10 @@ inductive Derivation : Sequent Atom → Type _ where
 
 def Derivable (S : Sequent Atom) := Nonempty (Derivation S)
 
+def Proposition.PDerivable (A : Proposition Atom) := Nonempty (Derivation ⟨∅,A⟩)
+
 def Proposition.equiv (A B : Proposition Atom) := Derivation ⟨{A},B⟩ × Derivation ⟨{B},A⟩
 def Proposition.Equiv (A B : Proposition Atom) := Derivable ⟨{A},B⟩ ∧ Derivable ⟨{B},A⟩
-
--- protected structure Equivalent (A B : Proposition Atom) : Prop where
---   mp : Derivable ⟨{A}, B⟩
---   mpr : Derivable ⟨{B},A⟩
 
 open Derivation
 
@@ -90,6 +88,14 @@ def Derivation.size {S : Sequent Atom} : Derivation S → Nat
   | disjE D D' D'' => D.size + D'.size + D''.size + 1
   | implI _ D => D.size + 1
   | implE D D' => D.size + D'.size + 1
+
+def Proposition.top : Proposition Atom := impl bot bot
+
+def derivationTop : Derivation (Atom := Atom) ⟨∅,Proposition.top⟩ := by
+  apply implI
+  exact ax (Atom := Atom) ∅ bot
+
+theorem top_derivable : Proposition.PDerivable (Atom := Atom) Proposition.top := ⟨derivationTop⟩
 
 /-! ### Common proof patterns -/
 
@@ -204,6 +210,16 @@ theorem Derivable.subs' {Γ : Ctx Atom} {A B : Proposition Atom}
 
 /-! ### Properties of NJ-equivalence -/
 
+theorem Proposition.derivable_iff (A : Proposition Atom) :
+    PDerivable A ↔ Proposition.Equiv A top := by
+  constructor <;> intro h
+  · constructor
+    · exact ⟨derivationTop.weak' (Δ := {A}) (by grind)⟩
+    · let ⟨D⟩ := h
+      exact ⟨D.weak' (Δ := {Proposition.top}) (by grind)⟩
+  · let ⟨D⟩ := h.2
+    exact ⟨D.subs' derivationTop⟩
+
 def mapEquivConclusion (Γ : Ctx Atom) {A B : Proposition Atom} (e : Proposition.equiv A B) :
     Derivation ⟨Γ, A⟩ → Derivation ⟨Γ, B⟩ := e.1.subs'
 
@@ -255,6 +271,9 @@ theorem equivalent_trans {A B C : Proposition Atom} :
 
 theorem equivalent_equivalence : Equivalence (Proposition.Equiv (Atom := Atom)) :=
   ⟨equivalent_refl, equivalent_comm, equivalent_trans⟩
+
+protected def propositionSetoid : Setoid (Proposition Atom) :=
+  ⟨Proposition.Equiv, equivalent_equivalence⟩
 
 /-!
 ### Negation theorems
