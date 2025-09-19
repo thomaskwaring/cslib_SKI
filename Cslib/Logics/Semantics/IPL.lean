@@ -5,7 +5,7 @@ Authors: Thomas Waring
 -/
 import Cslib.Logics.NaturalDeduction.NJ
 import Mathlib.Order.Heyting.Basic
-import Mathlib.Data.Finset.Fold
+import Mathlib.Data.Finset.Lattice.Fold
 import Mathlib.Order.Fin.Basic
 
 /-! # Heyting-algebra semantics for intuitionistic propositional logic -/
@@ -39,7 +39,8 @@ scoped notation v "[" A "]" => Proposition.interpret v A
 -- instance interpPropCoe : CoeFun (Valuation Atom H) (fun _ => Proposition Atom → H) where
 --   coe := Proposition.interpret
 
-def Ctx.interpret (Γ : Ctx Atom) : H := Γ.fold (· ⊓ ·) ⊤ (Proposition.interpret v)
+-- def Ctx.interpret (Γ : Ctx Atom) : H := Γ.fold (· ⊓ ·) ⊤ (Proposition.interpret v)
+def Ctx.interpret (Γ : Ctx Atom) : H := Γ.inf (Proposition.interpret v)
 
 scoped notation v "[" Γ "]" => Ctx.interpret v Γ
 
@@ -48,13 +49,10 @@ scoped notation v "[" Γ "]" => Ctx.interpret v Γ
 
 theorem Ctx.interpret_antitone {Γ Δ : Ctx Atom} (h : Γ ⊆ Δ) :
     v[Δ] ≤ v[Γ] := by
-  have h_disj : Disjoint Γ (Δ \ Γ) := Finset.disjoint_sdiff
-  have hΔ : Γ.disjUnion (Δ \ Γ) h_disj = Δ := by grind
-  have h_top : ⊤ ⊓ ⊤ = (⊤ : H) := top_inf_eq ⊤
+  have : Δ = Δ ∪ Γ := Finset.left_eq_union.mpr h
   unfold interpret
-  nth_rw 1 [←h_top]
-  rw [←hΔ, Finset.fold_disjUnion h_disj]
-  exact inf_le_left
+  rw [this, Finset.inf_union]
+  exact inf_le_right
 
 def Sequent.valid : Sequent Atom → Prop
   | ⟨Γ,A⟩ => (v[Γ]) ≤ (v[A])
@@ -104,7 +102,7 @@ protected theorem sound {S : Sequent Atom} (D : Derivation S) : Sequent.valid v 
   | @disjE Γ A B C _ _ _ ih₁ ih₂ ih₃ =>
     dsimp! only at ih₁ ih₂ ih₃ ⊢
     trans v[insert A Γ] ⊔ v[insert B Γ]
-    · simp only [Ctx.interpret, Finset.fold_insert_idem]
+    · simp only [Ctx.interpret, Finset.inf_insert]
       rw [←inf_sup_right]
       apply le_inf
       · assumption
@@ -127,15 +125,13 @@ theorem not_lem_derivable (x : Atom) : ¬ Derivable ⟨∅, (atom x).disj <| imp
   intro h
   let v : Atom → Fin 3 := fun _ => 1
   have h_sound : _ := IPL.Semantics.sound' v h
-  simp [Sequent.valid, Ctx.interpret, Finset.fold_empty, Top.top, Proposition.interpret,
-    v, Bot.bot, himp] at h_sound
+  simp [Sequent.valid, Ctx.interpret, Top.top, Proposition.interpret, v, Bot.bot, himp] at h_sound
 
 theorem not_dne_derivable (x : Atom) : ¬ Derivable ⟨{impl (atom x) bot |>.impl bot}, atom x⟩ := by
   intro h
   let v : Atom → Fin 3 := fun _ => 1
   have h_sound : _ := IPL.Semantics.sound' v h
-  simp [Sequent.valid, Ctx.interpret, Proposition.interpret, Finset.fold_singleton, v, Top.top,
-    Bot.bot, himp] at h_sound
+  simp [Sequent.valid, Ctx.interpret, Proposition.interpret, v, Top.top, Bot.bot, himp] at h_sound
 
 end soundness
 
