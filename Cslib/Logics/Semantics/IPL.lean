@@ -22,7 +22,7 @@ abbrev Valuation (Atom : Type u) (H : Type _) [HeytingAlgebra H] := Atom → H
 
 open Proposition NJ
 
-section defs
+section Defs
 
 variable {H : Type _} [HeytingAlgebra H] (v : Valuation Atom H)
 
@@ -57,15 +57,19 @@ theorem Ctx.interpret_antitone {Γ Δ : Ctx Atom} (h : Γ ⊆ Δ) :
 def Sequent.valid : Sequent Atom → Prop
   | ⟨Γ,A⟩ => (v[Γ]) ≤ (v[A])
 
-end defs
+end Defs
 
-section soundness
+section Soundness
 
 variable {H : Type _} [HeytingAlgebra H] (v : Valuation Atom H)
 
 open Derivation
 
-/-! ### Soundness -/
+/-!
+### Soundness
+
+A derivable sequent is valid for any valuation.
+-/
 
 protected theorem sound {S : Sequent Atom} (D : Derivation S) : Sequent.valid v S := by
   induction D with
@@ -121,6 +125,11 @@ protected theorem sound {S : Sequent Atom} (D : Derivation S) : Sequent.valid v 
 protected theorem sound' {S : Sequent Atom} (h : Derivable S) : Sequent.valid v S :=
   let ⟨D⟩ := h; IPL.Semantics.sound v D
 
+protected theorem consistent (h : Derivable (Atom := Atom) ⟨∅, bot⟩) : False := by
+  let v : Valuation Atom Prop := fun _ => True
+  have h_sound : _ := IPL.Semantics.sound' v h
+  simp [Sequent.valid, Ctx.interpret, Proposition.interpret] at h_sound
+
 theorem not_lem_derivable (x : Atom) : ¬ Derivable ⟨∅, (atom x).disj <| impl (atom x) bot⟩ := by
   intro h
   let v : Atom → Fin 3 := fun _ => 1
@@ -133,18 +142,21 @@ theorem not_dne_derivable (x : Atom) : ¬ Derivable ⟨{impl (atom x) bot |>.imp
   have h_sound : _ := IPL.Semantics.sound' v h
   simp [Sequent.valid, Ctx.interpret, Proposition.interpret, v, Top.top, Bot.bot, himp] at h_sound
 
-end soundness
+end Soundness
 
-section completeness
+section Completeness
 
 open Derivation
 
 /-!
 ### Completeness
 
+A sequent which is valid for any valuation is derivable.
+
 Completeness for the Heyting-algebra semantics follows from the fact that
 {Propositions}/equivalence is itself a Heyting algebra, and a proposition maps under the obvious
-valuation to the top element iff it is derivable.
+valuation to the top element iff it is derivable. In particular, the sequent in question is
+derivable iff it is valid for one particular valuation.
 -/
 
 def propQuotient : Type _ := Quotient <| IPL.NJ.propositionSetoid (Atom := Atom)
@@ -342,20 +354,19 @@ def canonicalValuation : (Valuation Atom <| propQuotient (Atom := Atom)) := fun 
 theorem canonicalValuation_spec (A : Proposition Atom) :
     Proposition.interpret canonicalValuation A = ⟦A⟧ := by
   induction A with
-  | atom x => simp! [canonicalValuation]
+  | atom _ => simp! [canonicalValuation]
   | bot => simp! [Bot.bot]
-  | conj A B ihA ihB => simp! [min, SemilatticeInf.inf, Lattice.inf, ihA, ihB]
-  | disj A B ihA ihB => simp! [max, SemilatticeSup.sup, ihA, ihB]
-  | impl A B ihA ihB => simp! [himp, ihA, ihB]
+  | conj _ _ ihA ihB => simp! [min, SemilatticeInf.inf, Lattice.inf, ihA, ihB]
+  | disj _ _ ihA ihB => simp! [max, SemilatticeSup.sup, ihA, ihB]
+  | impl _ _ ihA ihB => simp! [himp, ihA, ihB]
 
 protected theorem complete (A : Proposition Atom) (h : Sequent.valid canonicalValuation ⟨∅, A⟩) :
     Proposition.PDerivable A := by
   simp! only [canonicalValuation_spec, Ctx.interpret, Finset.fold_empty, Top.top, LE.le,
     Quotient.lift_mk] at h
-  let ⟨D⟩ := h.subs' top_derivable
-  exact ⟨D⟩
+  exact h.subs' top_derivable
 
-end completeness
+end Completeness
 
 end Semantics
 
