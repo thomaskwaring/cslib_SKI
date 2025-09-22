@@ -284,7 +284,7 @@ The following are valid in minimal logic, so we use `impl (-) C` over `~(-) := i
 /-- Double negation introduction -/
 def Derivation.dni {A B : Proposition Atom} : Derivation ⟨{A},impl (impl A B) B⟩ := by
   apply implI (A := A.impl B)
-  apply implE (A := A) <;> apply ax' (by grind)
+  apply implE (A := A) <;> exact ax' (by grind)
 
 theorem Derivable.dni {A B : Proposition Atom} : Derivable ⟨{A},impl (impl A B) B⟩ :=
   ⟨Derivation.dni⟩
@@ -330,11 +330,11 @@ def Derivation.modusTollens {A B : Proposition Atom} (C : Proposition Atom)
     (D : Derivation ⟨{A}, B⟩) : Derivation ⟨{B.impl C}, A.impl C⟩ := by
   apply implI
   apply implE (A := B)
-  · apply ax' (by grind)
+  · exact ax' (by grind)
   · have : ({A, B.impl C} : Ctx Atom) = ({B} \ {B}) ∪ {A, B.impl C} := by grind
     rw [this]
     apply Derivation.subs
-    · apply ax' (by grind)
+    · exact ax' (by grind)
     · exact D.weak {B.impl C}
 
 theorem Derivable.modus_tollens {A B : Proposition Atom} (C : Proposition Atom)
@@ -357,6 +357,7 @@ theorem Derivable.modus_tollens' {Γ : Ctx Atom} {A B : Proposition Atom} (C : P
 The following are valid in minimal logic, so we use `impl (-) C` over `~(-) := impl (-) bot`.
 -/
 
+/-- (A → C) ∧ (B → C) ⊢ (A ∨ B) → C -/
 def disjImpOfConjImps {A B C : Proposition Atom} :
     Derivation ⟨{conj (impl A C) (impl B C)}, impl (disj A B) C⟩ := by
   apply implI
@@ -364,30 +365,33 @@ def disjImpOfConjImps {A B C : Proposition Atom} :
   · apply ax
   · apply implE (A := A)
     · apply conjE₁ (B := B.impl C)
-      apply ax' (by grind)
+      exact ax' (by grind)
     · apply ax
   · apply implE (A := B)
     · apply conjE₂ (A := A.impl C)
-      apply ax' (by grind)
+      exact ax' (by grind)
     · apply ax
 
+/-- (A → C) ∧ (B → C) ⊢ (A ∨ B) → C -/
 theorem disj_imp_of_conj_imps {A B C : Proposition Atom} :
     Derivable ⟨{conj (impl A C) (impl B C)}, impl (disj A B) C⟩ := ⟨disjImpOfConjImps⟩
 
+/-- (A ∨ B) → C ⊢ (A → C) ∧ (B → C) -/
 def conjImpsOfDisjImp {A B C : Proposition Atom} :
     Derivation ⟨{impl (disj A B) C}, conj (impl A C) (impl B C)⟩ := by
   apply conjI
   · apply implI
     apply implE (A := A.disj B)
-    · apply ax' (by grind)
+    · exact ax' (by grind)
     · apply disjI₁
       apply ax
   · apply implI
     apply implE (A := A.disj B)
-    · apply ax' (by grind)
+    · exact ax' (by grind)
     · apply disjI₂
       apply ax
 
+/-- (A ∨ B) → C ⊢ (A → C) ∧ (B → C) -/
 theorem conj_imps_of_disj_imp {A B C : Proposition Atom} :
     Derivable ⟨{impl (disj A B) C}, conj (impl A C) (impl B C)⟩ := ⟨conjImpsOfDisjImp⟩
 
@@ -399,22 +403,137 @@ theorem disj_imp_conj_imps_equivalent {A B C : Proposition Atom} :
     Proposition.Equiv (impl (disj A B) C) (conj (impl A C) (impl B C)) :=
   ⟨conj_imps_of_disj_imp, disj_imp_of_conj_imps⟩
 
+/-- (A → C) ∨ (B → C) ⊢ (A ∧ B) → C -/
 def conjImpOfDisjImps {A B C : Proposition Atom} :
     Derivation ⟨{disj (impl A C) (impl B C)}, impl (conj A B) C⟩ := by
   apply implI
   apply disjE (A := A.impl C) (B := B.impl C)
-  · apply ax' (by grind)
+  · exact ax' (by grind)
   · apply implE (A := A)
     · apply ax
     · apply conjE₁ (B := B)
-      apply ax' (by grind)
+      exact ax' (by grind)
   · apply implE (A := B)
     · apply ax
     · apply conjE₂ (A := A)
-      apply ax' (by grind)
+      exact ax' (by grind)
 
+/-- (A → C) ∨ (B → C) ⊢ (A ∧ B) → C -/
 theorem conj_imp_of_disj_imps {A B C : Proposition Atom} :
     Derivable ⟨{disj (impl A C) (impl B C)}, impl (conj A B) C⟩ := ⟨conjImpOfDisjImps⟩
+
+/-! ### Further equivalences -/
+
+/-- Equivalence of A → (B → C) and (A ∧ B) → C -/
+def curryEquiv {A B C : Proposition Atom} :
+    Proposition.equiv (A.impl (B.impl C)) (impl (A.conj B) C) := by
+  constructor
+  · apply implI
+    apply implE (A := B)
+    · apply implE (A := A)
+      · exact ax' (by grind)
+      · apply conjE₁ (B := B)
+        exact ax' (by grind)
+    · apply conjE₂ (A := A)
+      exact ax' (by grind)
+  · apply implI
+    apply implI
+    apply implE (A := A.conj B)
+    · exact ax' (by grind)
+    · apply conjI <;> exact ax' (by grind)
+
+/-- Equivalence of A → (B → C) and (A ∧ B) → C -/
+theorem curry_equiv {A B C : Proposition Atom} :
+    Proposition.Equiv (A.impl (B.impl C)) (impl (A.conj B) C) := ⟨⟨curryEquiv.1⟩, ⟨curryEquiv.2⟩⟩
+
+/-- A ∧ B ⊢ B ∧ A -/
+def conjCommDer {A B : Proposition Atom} : Derivation ⟨{A.conj B}, B.conj A⟩ := by
+  apply conjI
+  · apply conjE₂ (A := A)
+    exact ax' (by grind)
+  · apply conjE₁ (B := B)
+    exact ax' (by grind)
+
+/-- Equivalence of A ∧ B and B ∧ A -/
+def conjCommEquiv {A B : Proposition Atom} : Proposition.equiv (A.conj B) (B.conj A) :=
+  ⟨conjCommDer, conjCommDer⟩
+
+/-- Equivalence of A ∧ B and B ∧ A -/
+theorem conj_comm_equiv {A B : Proposition Atom} : Proposition.Equiv (A.conj B) (B.conj A) :=
+  ⟨⟨conjCommDer⟩, ⟨conjCommDer⟩⟩
+
+/-- Equivalence of A ∧ A and A -/
+def conjIdemEquiv {A : Proposition Atom} : Proposition.equiv (A.conj A) A := by
+  constructor
+  · apply conjE₁ (B := A)
+    exact ax' (by grind)
+  · apply conjI <;> exact ax' (by grind)
+
+/-- Equivalence of A ∧ A and A -/
+theorem conj_idem_equiv {A : Proposition Atom} : Proposition.Equiv (A.conj A) A :=
+  ⟨⟨conjIdemEquiv.1⟩, ⟨conjIdemEquiv.2⟩⟩
+
+/-- A ∨ B ⊢ B ∨ A -/
+def disjCommDer {A B : Proposition Atom} : Derivation ⟨{A.disj B}, B.disj A⟩ := by
+  apply disjE (A := A) (B := B)
+  · exact ax' (by grind)
+  · apply disjI₂
+    exact ax' (by grind)
+  · apply disjI₁
+    exact ax' (by grind)
+
+/-- Equivalence of A ∨ B and B ∨ A -/
+def disjCommEquiv {A B : Proposition Atom} : Proposition.equiv (A.disj B) (B.disj A) :=
+  ⟨disjCommDer, disjCommDer⟩
+
+/-- Equivalence of A ∨ B and B ∨ A -/
+theorem disj_comm_equiv {A B : Proposition Atom} : Proposition.Equiv (A.disj B) (B.disj A) :=
+  ⟨⟨disjCommDer⟩, ⟨disjCommDer⟩⟩
+
+/-- Equivalence of A ∨ A and A -/
+def disjIdemEquiv {A : Proposition Atom} : Proposition.equiv (A.disj A) A := by
+  constructor
+  · apply disjE (A := A) (B := A) <;> exact ax' (by grind)
+  · apply disjI₁
+    exact ax' (by grind)
+
+/-- Equivalence of A ∨ A and A -/
+theorem disj_idem_equiv {A : Proposition Atom} : Proposition.Equiv (A.disj A) A :=
+  ⟨⟨disjIdemEquiv.1⟩, ⟨disjIdemEquiv.2⟩⟩
+
+/-- Equivalence of A → (A → B) and A → B -/
+def implIdemEquiv {A B : Proposition Atom} :
+    Proposition.equiv (A.impl <| A.impl B) (A.impl B) := by
+  constructor
+  · apply implI
+    apply implE (A := A)
+    · apply implE (A := A)
+      · exact ax' (by grind)
+      · exact ax' (by grind)
+    · exact ax' (by grind)
+  · apply implI
+    exact ax' (by grind)
+
+/-- Equivalence of A → (A → B) and A → B -/
+theorem impl_idem_equiv {A B : Proposition Atom} :
+    Proposition.Equiv (A.impl <| A.impl B) (A.impl B) := ⟨⟨implIdemEquiv.1⟩, ⟨implIdemEquiv.2⟩⟩
+
+/-- A → (B → C) ⊢ B → (A → C) -/
+def implSwapDer {A B C : Proposition Atom} :
+    Derivation ⟨{A.impl <| B.impl C}, B.impl (A.impl C)⟩ := by
+  apply implI
+  apply implI
+  apply implE (A := B)
+  · apply implE (A := A) <;> exact ax' (by grind)
+  · exact ax' (by grind)
+
+/-- Equivalence of A → (B → C) and B → (A → C) -/
+def implSwapEquiv {A B C : Proposition Atom} :
+    Proposition.equiv (A.impl <| B.impl C) (B.impl (A.impl C)) := ⟨implSwapDer, implSwapDer⟩
+
+/-- Equivalence of A → (B → C) and B → (A → C) -/
+theorem impl_swap_equiv {A B C : Proposition Atom} :
+    Proposition.Equiv (A.impl <| B.impl C) (B.impl (A.impl C)) := ⟨⟨implSwapDer⟩, ⟨implSwapDer⟩⟩
 
 end NJ
 
