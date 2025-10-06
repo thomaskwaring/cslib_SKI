@@ -156,6 +156,12 @@ theorem Theory.SDerivable.theory_weak (T T' : Theory Atom) (hT : T ⊆ T') (S : 
     T.SDerivable S → T'.SDerivable S
   | .der Γ hΓ D => ⟨Γ, by grind, D⟩
 
+theorem Theory.Derivable.iff_sDerivable_empty {T : Theory Atom} {A : Proposition Atom} :
+    ⊢[T] A ↔ ∅ ⊢[T] A := by
+  constructor
+    <;> intro ⟨Γ, _, D⟩
+    <;> exact ⟨Γ, by grind, D⟩
+
 /-- A proposition is derivable if it has a derivation from the empty theory. -/
 abbrev Derivable : Proposition Atom → Prop := Theory.empty Atom |>.Derivable
 
@@ -338,6 +344,21 @@ theorem SDerivable.subs {Γ Δ : Ctx Atom} {A B : Proposition Atom} :
 theorem SDerivable.subs' {Γ : Ctx Atom} {A B : Proposition Atom} :
     ⊢ (A ⟶ B) → Γ ⊢ A → Γ ⊢ B :=
   Theory.SDerivable.subs'
+
+theorem Theory.Derivable.multi_subs {T : Theory Atom} {Γ : Ctx Atom} {B : Proposition Atom}
+    (hΓ : ∀ A ∈ Γ, ⊢[T] A) (hB : Γ ⊢[T] B) : ⊢[T] B := by
+  induction Γ using Finset.induction with
+  | empty => exact Theory.Derivable.iff_sDerivable_empty.mpr hB
+  | insert A Γ h_insert ih =>
+    apply ih
+    · grind
+    · have : (insert A Γ \ {A}) ∪ ∅ = Γ := by grind
+      rw [←this]
+      apply Theory.SDerivable.subs
+      · assumption
+      · rw [←Theory.Derivable.iff_sDerivable_empty]
+        apply hΓ
+        grind
 
 /-! ### Inference rules for derivability -/
 
