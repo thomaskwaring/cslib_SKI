@@ -155,6 +155,30 @@ theorem dn_equiv [Bot Atom] {T : Theory Atom} [IsClassical T] (A : Proposition A
   · apply Theory.Derivable.ax'
     grind [IsClassical]
 
+theorem mt_equiv [Bot Atom] {T : Theory Atom} [IsClassical T] (A B : Proposition Atom) :
+    (A ⟶ B) ≡[T] (~B ⟶ ~A) := by
+  constructor
+  · refine ⟨∅, by grind, ?_⟩
+    apply implI
+    apply implI
+    apply implI
+    apply implE (A := B)
+    · exact ax' (by grind)
+    · apply implE (A := A)
+      · exact ax' (by grind)
+      · exact ax ..
+  · refine ⟨{~~B ⟶ B}, by grind [IsClassical], ?_⟩
+    apply implI
+    apply implI
+    apply implE (A := ~~B)
+    · exact ax' (by grind)
+    · apply implI
+      apply implE (A := A)
+      · apply implE (A := ~B)
+        · exact ax' (by grind)
+        · exact ax' (by grind)
+      · exact ax' (by grind)
+
 theorem lem [Bot Atom] {T : Theory Atom} [IsClassical T] {A : Proposition Atom} :
     T.Derivable (A ⋎ ~A) := by
   apply Theory.Derivable.dne
@@ -188,6 +212,12 @@ theorem disj_not_of_not_conj [Bot Atom] {T : Theory Atom} [IsClassical T] {A B :
             · exact ax' (by grind)
             · apply disjI₂
               exact ax' (by grind)
+
+theorem disj_not_not_conj_equivalent [Bot Atom] {T : Theory Atom} [IsClassical T]
+    {A B : Proposition Atom} : (~(A ⋏ B)) ≡[T] (~A ⋎ ~B) := by
+  constructor <;> rw [T.impl_derivable_iff]
+  · exact disj_not_of_not_conj
+  · exact Theory.SDerivable.theory_weak (Theory.empty Atom) T (by grind) _ conj_imp_of_disj_imps
 
 theorem impl_equiv_disj [Bot Atom] {T : Theory Atom} [IsClassical T] {A B : Proposition Atom} :
     (A ⟶ B) ≡[T] (~A ⋎ B) := by

@@ -549,6 +549,7 @@ def transEquiv {A B C : Proposition Atom} (eAB : Proposition.equiv A B)
     (eBC : Proposition.equiv B C) : Proposition.equiv A C :=
   ⟨mapEquivConclusion _ eBC eAB.1, mapEquivConclusion _ (commEquiv eAB) eBC.2⟩
 
+@[refl]
 theorem equivalent_refl {T : Theory Atom} (A : Proposition Atom) : A ≡[T] A := by
   have : T.Derivable (A ⟶ A) := by refine ⟨∅, by grind, ?_⟩; apply implI; exact ax' (by grind)
   grind [Theory.Equiv]
