@@ -422,7 +422,7 @@ def conjImpOfDisjImps {A B C : Proposition Atom} :
 theorem conj_imp_of_disj_imps {A B C : Proposition Atom} :
     Derivable ⟨{disj (impl A C) (impl B C)}, impl (conj A B) C⟩ := ⟨conjImpOfDisjImps⟩
 
-/-! ### Further equivalences -/
+/-! ### Further equivalences and implications -/
 
 /-- Equivalence of A → (B → C) and (A ∧ B) → C -/
 def curryEquiv {A B C : Proposition Atom} :
@@ -531,9 +531,77 @@ def implSwapDer {A B C : Proposition Atom} :
 def implSwapEquiv {A B C : Proposition Atom} :
     Proposition.equiv (A.impl <| B.impl C) (B.impl (A.impl C)) := ⟨implSwapDer, implSwapDer⟩
 
+/-- A → (B → C) ⊢ (A → B) → (A → C) -/
+def implImplDistrib {A B C : Proposition Atom} :
+    Derivation ⟨{A.impl (B.impl C)}, impl (A.impl B) (A.impl C)⟩ := by
+  apply implI
+  apply implI
+  apply implE (A := B) <;> apply implE (A := A) <;> exact ax' (by grind)
+
+theorem impl_impl_distrib {A B C : Proposition Atom} :
+    Derivable ⟨{A.impl (B.impl C)}, impl (A.impl B) (A.impl C)⟩ := ⟨implImplDistrib⟩
+
 /-- Equivalence of A → (B → C) and B → (A → C) -/
 theorem impl_swap_equiv {A B C : Proposition Atom} :
     Proposition.Equiv (A.impl <| B.impl C) (B.impl (A.impl C)) := ⟨⟨implSwapDer⟩, ⟨implSwapDer⟩⟩
+
+/-- Equivalence of A ∧ (A ∨ B) and A -/
+def absorbConjDisj {A B : Proposition Atom} : Proposition.equiv (A.conj <| (A.disj B)) A := by
+  constructor
+  · apply conjE₁ (B := (A.disj B))
+    exact ax' (by grind)
+  · apply conjI
+    · exact ax' (by grind)
+    · apply disjI₁
+      exact ax' (by grind)
+
+/-- Equivalence of A ∧ (A ∨ B) and A -/
+theorem absorb_conj_disj {A B : Proposition Atom} : Proposition.Equiv (A.conj <| (A.disj B)) A :=
+  ⟨⟨absorbConjDisj.1⟩, ⟨absorbConjDisj.2⟩⟩
+
+/-- Equivalence of A ∨ (A ∧ B) and A -/
+def absorbDisjConj {A B : Proposition Atom} : Proposition.equiv (A.disj <| A.conj B) A := by
+  constructor
+  · apply disjE (A := A) (B := A.conj B)
+    · exact ax' (by grind)
+    · exact ax' (by grind)
+    · apply conjE₁ (B := B)
+      exact ax' (by grind)
+  · apply disjI₁
+    exact ax' (by grind)
+
+/-- Equivalence of A ∨ (A ∧ B) and A -/
+theorem absorb_disj_conj {A B : Proposition Atom} :  Proposition.Equiv (A.disj <| A.conj B) A :=
+  ⟨⟨absorbDisjConj.1⟩, ⟨absorbDisjConj.2⟩⟩
+
+/-- Falsum is absorbing for conjunction -/
+def botConjAbsorb {A : Proposition Atom} : Proposition.equiv (A.conj bot) bot := by
+  constructor
+  · apply conjE₂ (A := A)
+    exact ax' (by grind)
+  · apply conjI
+    · apply botE
+      exact ax' (by grind)
+    · exact ax' (by grind)
+
+/-- Falsum is absorbing for conjunction -/
+theorem bot_conj_absorb {A : Proposition Atom} : Proposition.Equiv (A.conj bot) bot :=
+  ⟨⟨botConjAbsorb.1⟩, ⟨botConjAbsorb.2⟩⟩
+
+/-- Falsum is neutral for disjunction -/
+def botDisjNeutral {A : Proposition Atom} : Proposition.equiv (A.disj bot) A := by
+  constructor
+  · apply disjE (A := A) (B := bot)
+    · exact ax' (by grind)
+    · exact ax' (by grind)
+    · apply botE
+      exact ax' (by grind)
+  · apply disjI₁
+    exact ax' (by grind)
+
+/-- Falsum is neutral for disjunction -/
+theorem bot_disj_neutral {A : Proposition Atom} : Proposition.Equiv (A.disj bot) A :=
+  ⟨⟨botDisjNeutral.1⟩, ⟨botDisjNeutral.2⟩⟩
 
 end NJ
 

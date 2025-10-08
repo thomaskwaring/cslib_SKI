@@ -162,8 +162,7 @@ derivable iff it is valid for one particular valuation.
 def propQuotient : Type _ := Quotient <| IPL.NJ.propositionSetoid (Atom := Atom)
 
 instance propPO : PartialOrder <| propQuotient (Atom := Atom) where
-  le := by
-    apply Quotient.lift₂ (f := fun A B => Derivable ⟨{A},B⟩)
+  le := Quotient.lift₂ (f := fun A B => Derivable ⟨{A},B⟩) (by
     intro A B A' B' hA hB
     rw [eq_iff_iff]
     constructor <;> intro h
@@ -175,6 +174,7 @@ instance propPO : PartialOrder <| propQuotient (Atom := Atom) where
       have :_ := (equivalent_hypotheses (C := B') ∅ hA)
       rw [insert_empty_eq] at this
       exact this.mpr h
+    )
   le_refl := by
     apply Quotient.ind
     intro A
@@ -197,10 +197,9 @@ instance propPO : PartialOrder <| propQuotient (Atom := Atom) where
     exact ⟨hAB, hBC⟩
 
 instance propLattice : Lattice <| propQuotient (Atom := Atom) where
-  inf := by
-    apply Quotient.lift₂ (f := fun A B => Quotient.mk NJ.propositionSetoid <| A.conj B)
+  inf := Quotient.lift₂ (f := fun A B => Quotient.mk NJ.propositionSetoid <| A.conj B) (by
     intro A B A' B' ⟨⟨DA'⟩, ⟨DA⟩⟩ ⟨⟨DB'⟩, ⟨DB⟩⟩
-    simp only [NJ.propositionSetoid, Quotient.eq]
+    simp only [NJ.propositionSetoid, propQuotient, Quotient.eq]
     constructor <;> constructor
     · apply conjI
       · apply DA'.subs' (Γ := {A.conj B})
@@ -216,10 +215,10 @@ instance propLattice : Lattice <| propQuotient (Atom := Atom) where
       · apply DB.subs' (Γ := {A'.conj B'})
         apply conjE₂ (A := A')
         apply ax' (by grind)
-  sup := by
-    apply Quotient.lift₂ (f := fun A B => Quotient.mk NJ.propositionSetoid <| A.disj B)
+    )
+  sup := Quotient.lift₂ (f := fun A B => Quotient.mk NJ.propositionSetoid <| A.disj B) (by
     intro A B A' B' ⟨⟨DA'⟩, ⟨DA⟩⟩ ⟨⟨DB'⟩, ⟨DB⟩⟩
-    simp only [NJ.propositionSetoid, Quotient.eq]
+    simp only [NJ.propositionSetoid, propQuotient, Quotient.eq]
     constructor <;> constructor
     · apply disjE (A := A) (B := B)
       · apply ax' (by grind)
@@ -233,6 +232,7 @@ instance propLattice : Lattice <| propQuotient (Atom := Atom) where
         exact DA.weak' (Δ := {A', A'.disj B'}) (by grind)
       · apply disjI₂
         exact DB.weak' (Δ := {B', A'.disj B'}) (by grind)
+    )
   inf_le_left := by
     apply Quotient.ind₂
     simp only [Quotient.lift_mk, LE.le]
@@ -299,10 +299,9 @@ instance propHeyting : HeytingAlgebra <| propQuotient (Atom := Atom) where
     constructor
     apply botE
     apply ax' (by grind)
-  himp := by
-    apply Quotient.lift₂ (f := fun A B => Quotient.mk NJ.propositionSetoid <| A.impl B)
+  himp := Quotient.lift₂ (f := fun A B => Quotient.mk NJ.propositionSetoid <| A.impl B) (by
     intro A B A' B' ⟨⟨DA'⟩, ⟨DA⟩⟩ ⟨⟨DB'⟩, ⟨DB⟩⟩
-    simp only [NJ.propositionSetoid, Quotient.eq]
+    simp only [NJ.propositionSetoid, propQuotient, Quotient.eq]
     constructor <;> constructor
     · apply implI
       apply DB'.subs'
@@ -314,6 +313,7 @@ instance propHeyting : HeytingAlgebra <| propQuotient (Atom := Atom) where
       apply implE (A := A')
       · apply ax' (by grind)
       · exact DA'.weak' (Δ := {A, A'.impl B'}) (by grind)
+    )
   le_himp_iff := by
     apply Quotient.ind₂
     intro A B
@@ -330,10 +330,9 @@ instance propHeyting : HeytingAlgebra <| propQuotient (Atom := Atom) where
     · apply implI
       apply D.subs'
       apply conjI <;> apply ax' (by grind)
-  compl := by
-    apply Quotient.lift (f := fun A => Quotient.mk NJ.propositionSetoid (A.impl bot))
+  compl := Quotient.lift (f := fun A => Quotient.mk NJ.propositionSetoid (A.impl bot)) (by
     intro A B ⟨⟨AB⟩, ⟨BA⟩⟩
-    simp only [NJ.propositionSetoid, Quotient.eq]
+    simp only [NJ.propositionSetoid, propQuotient, Quotient.eq]
     constructor <;> constructor
     · apply implI
       apply implE (A := A)
@@ -345,6 +344,7 @@ instance propHeyting : HeytingAlgebra <| propQuotient (Atom := Atom) where
       · apply ax' (by grind)
       · apply AB.weak'
         grind
+    )
   himp_bot := by
     apply Quotient.ind
     simp [NJ.propositionSetoid]
