@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Thomas Waring
 -/
 import Mathlib.Order.Notation
+import Mathlib.Data.FunLike.Basic
 
 /-! # Propositions
 
@@ -52,5 +53,19 @@ example [Bot Atom] : (⊤ : Proposition Atom) = Proposition.impl ⊥ ⊥ := rfl
 @[inherit_doc] scoped infix:35 " ⋎ " => Proposition.disj
 @[inherit_doc] scoped infix:30 " ⟶ " => Proposition.impl
 @[inherit_doc] scoped prefix:40 " ~ " => Proposition.neg
+
+def Proposition.map {Atom Atom' : Type u} (f : Atom → Atom') : Proposition Atom → Proposition Atom'
+  | atom x => atom (f x)
+  | conj A B => conj (A.map f) (B.map f)
+  | disj A B => disj (A.map f) (B.map f)
+  | impl A B => impl (A.map f) (B.map f)
+
+instance {Atom Atom' : Type u} : FunLike (Atom → Atom') (Proposition Atom) (Proposition Atom') where
+  coe := Proposition.map
+  coe_injective' f f' h := by
+    ext x
+    have : (Proposition.atom x).map f = (Proposition.atom x).map f' :=
+      congrFun h (Proposition.atom x)
+    grind [Proposition.map]
 
 end PL

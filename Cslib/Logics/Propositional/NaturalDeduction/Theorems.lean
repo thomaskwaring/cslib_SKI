@@ -46,6 +46,26 @@ theorem Derivable.not_not_lem {A B : Proposition Atom} :
     ⊢ ((A ⋎ (A ⟶ B) ⟶ B) ⟶ B) :=
   derivable_iff.mpr ⟨Derivation.notNotLEM⟩
 
+def Derivation.notNotDNE {A B C : Proposition Atom} :
+    Derivation ⟨{B ⟶ A}, ((((A ⟶ C) ⟶ B) ⟶ A) ⟶ C) ⟶ C⟩ := by
+  apply implI
+  apply implE (A := ((A ⟶ C) ⟶ B) ⟶ A) (ax' <| by grind)
+  apply implI
+  apply implE (A := B) (ax' <| by grind)
+  apply implE (A := (A ⟶ C)) (ax' <| by grind)
+  apply implI
+  apply implE (A := ((A ⟶ C) ⟶ B) ⟶ A) (ax' <| by grind)
+  apply implI
+  exact ax' (by grind)
+
+/-- This makes Glivenko's theorem (`Γ ⊢[CPL] B ↔ ~~Γ ⊢[IPL] ~~B`) work. Observe that it requires
+EFQ, however. -/
+theorem Derivable.not_not_dne [Bot Atom] {A : Proposition Atom} : ⊢[IPL] (~~(~~A ⟶ A)) :=
+  ⟨{⊥ ⟶ A}, by grind [IPL], Derivation.notNotDNE⟩
+
+theorem Derivable.foo [Bot Atom] {A C : Proposition Atom} : ⊢[IPL] (((~(A ⟶ C) ⟶ A) ⟶ C) ⟶ C) :=
+  ⟨{⊥ ⟶ A}, by grind [IPL], Derivation.notNotDNE⟩
+
 /-- Triple negation elimination -/
 def Derivation.tne {A B : Proposition Atom} :
     Derivation ⟨{((A ⟶ B) ⟶ B) ⟶ B}, A ⟶ B⟩ :=
@@ -143,6 +163,26 @@ def conjImpOfDisjImps {A B C : Proposition Atom} :
 theorem conj_imp_of_disj_imps {A B C : Proposition Atom} :
     SDerivable ⟨{(A ⟶ C) ⋎ (B ⟶ C)}, (A ⋏ B) ⟶ C⟩ :=
   sDerivable_iff.mpr ⟨conjImpOfDisjImps⟩
+
+/-! ### Intuitionistic theorems -/
+
+def disjSyllogism [Bot Atom] {Γ : Ctx Atom} {A B : Proposition Atom} (D : Derivation ⟨Γ, A ⋎ B⟩)
+    (E : Derivation ⟨Γ, ~ A⟩) : Derivation ⟨insert (⊥ ⟶ B) Γ, B⟩ := by
+  apply disjE (A := A) (B := B)
+  · exact D.weak' (by grind)
+  · apply implE (A := ⊥)
+    · exact ax' (by grind)
+    · apply implE (A := A)
+      · exact E.weak' (by grind)
+      · exact ax' (by grind)
+  · exact ax' (by grind)
+
+theorem disj_syllogism [Bot Atom] {T : Theory Atom} [IsIntuitionistic T] {Γ : Ctx Atom}
+    {A B : Proposition Atom} :
+    T.SDerivable ⟨Γ, A ⋎ B⟩ → T.SDerivable ⟨Γ, ~ A⟩ → T.SDerivable ⟨Γ, B⟩
+  | ⟨Γ, hΓ, D⟩, ⟨Δ, hΔ, E⟩ => by
+    refine ⟨insert (⊥ ⟶ B) (Γ ∪ Δ), by grind [IsIntuitionistic], ?_⟩
+    exact disjSyllogism (D.weak' <| by grind) (E.weak' <| by grind)
 
 /-! ### Classical theorems -/
 

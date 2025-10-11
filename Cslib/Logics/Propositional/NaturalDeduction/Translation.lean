@@ -272,6 +272,7 @@ theorem Theory.translation_derivable_iff {T : Theory Atom} (B : Proposition Atom
     rw [←hA'.2]
     rw [←Theory.equivalent_derivable <| Theory.godelGentzen_equiv A']
     exact Theory.Derivable.ax' (by grind)
+
 end NJ
 
 end PL

@@ -6,6 +6,7 @@ Authors: Thomas Waring
 import Cslib.Logics.Propositional.Defs
 import Mathlib.Data.Finset.Insert
 import Mathlib.Data.Finset.SDiff
+import Mathlib.Data.Finset.Image
 
 /-!
 # Gentzen's NJ
@@ -72,7 +73,7 @@ open Proposition
 /-- Contexts are finsets of propositions. -/
 abbrev Ctx (Atom) := Finset (Proposition Atom)
 
-/-- Theories are abitrary sets of propositions. -/
+/-- Theories are arbitrary sets of propositions. -/
 abbrev Theory (Atom) := Set (Proposition Atom)
 
 abbrev Theory.empty (Atom) : Theory (Atom) := ∅
@@ -359,6 +360,32 @@ theorem Theory.Derivable.multi_subs {T : Theory Atom} {Γ : Ctx Atom} {B : Propo
       · rw [←Theory.Derivable.iff_sDerivable_empty]
         apply hΓ
         grind
+
+def Derivation.map {Atom Atom' : Type u} [DecidableEq Atom] [DecidableEq Atom'] (f : Atom → Atom')
+    {Γ : Ctx Atom} {B : Proposition Atom} :
+    Derivation ⟨Γ, B⟩ → Derivation ⟨Γ.image (Proposition.map f), B.map f⟩
+  | ax Γ B =>
+    (Finset.image_insert (Proposition.map f) B Γ) ▸ ax (Γ.image (Proposition.map f)) (B.map f)
+  | conjI D E => conjI (D.map f) (E.map f)
+  | conjE₁ D => conjE₁ (D.map f)
+  | conjE₂ D => conjE₂ (D.map f)
+  | disjI₁ D => disjI₁ (D.map f)
+  | disjI₂ D => disjI₂ (D.map f)
+  | disjE D E E' => disjE (D.map f)
+    ((Finset.image_insert (Proposition.map f) _ _) ▸ E.map f)
+    ((Finset.image_insert (Proposition.map f) _ _) ▸ E'.map f)
+  | implI _ D => implI _ <| (Finset.image_insert (Proposition.map f) _ _) ▸ (D.map f)
+  | implE D E => implE (D.map f) (E.map f)
+
+def Theory.image {Atom' : Type u} [DecidableEq Atom'] (T : Theory Atom) (f : Atom → Atom') :
+    Theory Atom' :=
+  Set.image (Proposition.map f) T
+
+theorem Theory.Derivable.image {Atom' : Type u} [DecidableEq Atom'] {T : Theory Atom}
+    (f : Atom → Atom') {A : Proposition Atom} : ⊢[T] A → ⊢[T.image f] (A.map f) := by
+  intro ⟨_, _, D⟩
+  refine ⟨_, ?_, D.map f⟩
+  grind [Theory.image]
 
 /-! ### Inference rules for derivability -/
 

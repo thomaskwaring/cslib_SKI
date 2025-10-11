@@ -21,7 +21,6 @@ derivable from `T'`.
 - `Theory.saturation_saturation` : the saturation of a theory is saturated.
 - `Theory.Derivable.iff_derivable_saturation` : a proposition is derivable from `T` iff it is
 derivable from `T.saturation` — equivalently, saturation is idempotent (viz `Theory.saturate_idem`).
-
 -/
 
 namespace PL
@@ -29,6 +28,8 @@ namespace PL
 namespace NJ
 
 variable {Atom : Type u} [DecidableEq Atom]
+
+/-! ### Preorder structure on theories -/
 
 def Theory.WeakerThan (T T' : Theory Atom) : Prop :=
   ∀ (A : Proposition Atom), T.Derivable A → T'.Derivable A
@@ -95,7 +96,6 @@ theorem Theory.Derivable.iff_derivable_saturation {T : Theory Atom} {A : Proposi
 theorem Theory.saturation_weaker_than (T : Theory Atom) : T.saturate ≤ T := by
   intro _ _
   rwa [← Theory.Derivable.iff_derivable_saturation]
-
 
 end NJ
 
