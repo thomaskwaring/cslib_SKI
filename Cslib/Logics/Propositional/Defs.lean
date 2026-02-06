@@ -65,13 +65,15 @@ example [Bot Atom] : (⊤ : Proposition Atom) = Proposition.impl ⊥ ⊥ := rfl
 @[inherit_doc] scoped prefix:40 " ~ " => Proposition.neg
 
 /-- A function on atoms induces a function on propositions. -/
-def Proposition.map {Atom Atom' : Type u} (f : Atom → Atom') : Proposition Atom → Proposition Atom'
-  | atom x => atom (f x)
+def Proposition.map {Atom Atom' : Type u} (f : Atom → Proposition Atom') :
+    Proposition Atom → Proposition Atom'
+  | atom x => f x
   | conj A B => conj (A.map f) (B.map f)
   | disj A B => disj (A.map f) (B.map f)
   | impl A B => impl (A.map f) (B.map f)
 
-instance {Atom Atom' : Type u} : FunLike (Atom → Atom') (Proposition Atom) (Proposition Atom') where
+instance {Atom Atom' : Type u} : FunLike (Atom → Proposition Atom') (Proposition Atom)
+    (Proposition Atom') where
   coe := Proposition.map
   coe_injective' f f' h := by
     ext x
@@ -83,10 +85,11 @@ instance {Atom Atom' : Type u} : FunLike (Atom → Atom') (Proposition Atom) (Pr
 abbrev Theory (Atom) := Set (Proposition Atom)
 
 /-- Extend `Proposition.map` to theories. -/
-def Theory.map {Atom Atom' : Type u} (f : Atom → Atom') : Theory Atom → Theory Atom' :=
+def Theory.map {Atom Atom' : Type u} (f : Atom → Proposition Atom') : Theory Atom → Theory Atom' :=
   Set.image (Proposition.map f)
 
-instance {Atom Atom' : Type u} : FunLike (Atom → Atom') (Theory Atom) (Theory Atom') where
+instance {Atom Atom' : Type u} :
+    FunLike (Atom → Proposition Atom') (Theory Atom) (Theory Atom') where
   coe := Theory.map
   coe_injective' f f' h := by
     ext x
@@ -147,7 +150,7 @@ theorem instIsClassicalExtention [Bot Atom] {T T' : Theory Atom} [IsClassical T]
 /-- Attach a bottom element to a theory `T`, and the principle of explosion for that bottom. -/
 @[reducible]
 def Theory.intuitionisticCompletion (T : Theory Atom) : Theory (WithBot Atom) :=
-  T.map (WithBot.some) ∪ IPL
+  T.map (fun x => Proposition.atom <| some x) ∪ IPL
 
 instance instIsIntuitionisticIntuitionisticCompletion (T : Theory Atom) :
     IsIntuitionistic T.intuitionisticCompletion := by grind

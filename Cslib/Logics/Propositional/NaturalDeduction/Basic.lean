@@ -60,8 +60,9 @@ variable {Atom : Type u} [DecidableEq Atom] {T : Theory Atom}
 /-- Contexts are finsets of propositions. -/
 abbrev Ctx (Atom) := Finset (Proposition Atom)
 
-def Ctx.map {Atom Atom' : Type u} [DecidableEq Atom] [DecidableEq Atom'] (f : Atom → Atom') :
-    Ctx Atom → Ctx Atom' := Finset.image (Proposition.map f)
+def Ctx.map {Atom Atom' : Type u} [DecidableEq Atom] [DecidableEq Atom']
+    (f : Atom → Proposition Atom') : Ctx Atom → Ctx Atom' :=
+  Finset.image (Proposition.map f)
 
 /-- Sequents {A₁, ..., Aₙ} ⊢ B. -/
 abbrev Sequent (Atom) := Ctx Atom × Proposition Atom
@@ -272,7 +273,7 @@ def Theory.Derivation.subs {Γ Δ : Ctx Atom} {A B : Proposition Atom}
 
 /-- Transport a derivation along a map of atoms. -/
 def Theory.Derivation.map {Atom Atom' : Type u} [DecidableEq Atom] [DecidableEq Atom']
-    {T : Theory Atom} (f : Atom → Atom') {Γ : Ctx Atom} {B : Proposition Atom} :
+    {T : Theory Atom} (f : Atom → Proposition Atom') {Γ : Ctx Atom} {B : Proposition Atom} :
     T.Derivation ⟨Γ, B⟩ → (T.map f).Derivation ⟨Γ.map f, B.map f⟩
   | ax h => ax <| Set.mem_image_of_mem (Proposition.map f) h
   | ass h => ass <| Finset.mem_image_of_mem (Proposition.map f) h
@@ -288,7 +289,7 @@ def Theory.Derivation.map {Atom Atom' : Type u} [DecidableEq Atom] [DecidableEq 
   | implE D E => implE (D.map f) (E.map f)
 
 theorem Theory.Derivable.image {Atom' : Type u} [DecidableEq Atom'] {T : Theory Atom}
-    (f : Atom → Atom') {Γ : Ctx Atom} {B : Proposition Atom} :
+    (f : Atom → Proposition Atom') {Γ : Ctx Atom} {B : Proposition Atom} :
     Γ ⊢[T] B → (Γ.map f) ⊢[T.map f] (B.map f) := by
   intro ⟨D⟩
   exact ⟨D.map f⟩
@@ -560,7 +561,7 @@ instance instPreorderTheory : Preorder (Theory Atom) where
 atomic language. -/
 structure Extension {Atom Atom' : Type u} [DecidableEq Atom] [DecidableEq Atom'] (T : Theory Atom)
     (T' : Theory Atom') where
-  f : Atom → Atom'
+  f : Atom → Proposition Atom'
   h : T.map f ≤ T'
 
 /-- An extension of theories is conservative if it doesn't add any new theorems, when restricted
