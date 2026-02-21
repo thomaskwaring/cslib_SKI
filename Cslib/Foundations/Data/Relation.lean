@@ -294,6 +294,10 @@ theorem LocallyConfluent.Terminating_toConfluent (hlc : LocallyConfluent r) (ht 
         have ⟨w, vw, zw⟩ : Join (ReflTransGen r) v z := by grind [ReflTransGen.trans]
         exact ⟨w, .trans yv vw, zw⟩
 
+-- abbrev SN (r : α → α → Prop) (x : α) : Prop := Acc (fun a b => r b a) x
+
+-- theorem terminating_iff_forall_sN : Terminating r ↔ ∀ x, SN r x := ⟨fun ⟨h⟩ => h, .intro⟩
+
 /-- A relation is strongly confluent when single steps are reflexive- and multi-joinable. -/
 abbrev StronglyConfluent (r : α → α → Prop) :=
   ∀ {x y₁ y₂}, r x y₁ → r x y₂ → ∃ z, ReflGen r y₁ z ∧ ReflTransGen r y₂ z
