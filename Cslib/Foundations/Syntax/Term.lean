@@ -1,0 +1,125 @@
+/-
+Copyright (c) 2026 Thomas Waring. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Thomas Waring
+-/
+
+module
+
+public import Cslib.Foundations.Syntax.HasWellFormed
+public import Cslib.Foundations.Data.Tree.Rewriting
+
+public section
+
+namespace Cslib
+
+structure Signature where
+  sym : Type _
+  arity : sym → ℕ
+
+namespace PTree
+
+variable {S X : Type _} {arity : S → ℕ}
+
+def WF (arity : S → ℕ) : PTree S X → Prop
+  | leaf _ => True
+  | node f ts => ts.length = arity f ∧ ∀ t ∈ ts, t.WF arity
+
+@[grind →]
+lemma WF.length_eq {f : S} {ts : List (PTree S X)} (h : (node f ts).WF arity) :
+    ts.length = arity f := by grind [WF]
+
+@[grind! .]
+lemma WF.wf_of_mem {f : S} {ts : List (PTree S X)} (h : (node f ts).WF arity) {t : PTree S X}
+    (ht : t ∈ ts) : t.WF arity := by rw [WF] at h; exact h.2 t ht
+
+@[grind →]
+lemma WF.lt_length_of_lt_arity {f : S} {ts : List (PTree S X)} (h : (node f ts).WF arity) {i : ℕ}
+    (hi : i < arity f) : i < ts.length := h.length_eq ▸ hi
+
+def WF.getArg {f : S} {ts : List (PTree S X)} (h : (node f ts).WF arity) {i : ℕ}
+    (hi : i < arity f) : PTree S X := ts[i]'(h.lt_length_of_lt_arity hi)
+
+lemma WF.cases {t : PTree S X} (h : t.WF arity) :
+    (∃ x : X, leaf x = t) ∨
+    ∃ (f : S) (ts : List (PTree S X)),
+      (node f ts) = t ∧ ts.length = arity f ∧ ∀ t ∈ ts, t.WF arity := by
+  cases t <;> grind [WF]
+
+lemma WF.getElem {t : PTree S X} (h : t.WF arity) {p : List ℕ} (hp : t.IsPosi p) :
+    t[p].WF arity := by
+  induction p generalizing t with
+  | nil => simpa
+  | cons i p ih =>
+    obtain (⟨x, rfl⟩ | ⟨f, ts, rfl, hlen, hts⟩) := h.cases
+    · cases hp
+    · cases hp
+      case tail hi hp => grind
+
+lemma WF.subst {s t : PTree S X} (hs : s.WF arity) (ht : t.WF arity) (p : List ℕ) :
+    s[p:=t].WF arity := by
+  by_cases h : s.IsPosi p
+  · induction h with
+    | emp => simpa
+    | tail f ss i hi p hp ih =>
+      simp only [subst_node_cons_of_lt_length hi, WF, List.length_set]
+      constructor
+      · exact hs.length_eq
+      · intro s' hs'
+        obtain (hs' | rfl) := ss.mem_or_eq_of_mem_set hs'
+        · exact wf_of_mem hs hs'
+        · apply ih
+          exact wf_of_mem hs (ss.getElem_mem hi)
+  · rwa [subst_eq_self_of_not_isPosi h]
+
+lemma WF.isSubtree {s t : PTree S X} (h : s ≤ t) (ht : t.WF arity) : s.WF arity := by
+  induction h with
+  | refl => exact ht
+  | tail f ts t' ht' s h ih => exact ih (ht.wf_of_mem ht')
+
+end PTree
+
+structure Term (Sig : Signature) (X : Type _) where
+  t : PTree Sig.sym X
+  wf : t.WF Sig.arity
+
+namespace Term
+
+open PTree
+
+variable {Sig : Signature} {X : Type _} {s t u : Term Sig X}
+
+instance instCoeTermPTree : Coe (Term Sig X) (PTree Sig.sym X) where
+  coe := Term.t
+
+/--
+The following result can be used to deconstruct a `Term` by cases on its underlying tree, for
+instance:
+```
+example (t : Term Sig X) : True := by
+  obtain ⟨t, ht⟩ := t
+  obtain (⟨x, rfl⟩ | ⟨f, ts, hts, rfl⟩) := (⟨t, ht⟩ : Term Sig X).wf_cases
+   <;> sorry
+```
+-/
+lemma wf_cases (t : Term Sig X) :
+    (∃ x : X, (leaf (S := Sig.sym) x = t)) ∨
+    (∃ (f : Sig.sym) (ts : List (Term Sig X)),
+      ts.length = Sig.arity f ∧ (node f (ts.map Term.t) = t)) := by
+  replace ⟨t, ht⟩ := t
+  cases t
+  case leaf x => left; use x
+  case node f ts =>
+    obtain ⟨hlen, hts⟩ :
+        ts.length = Sig.arity f ∧ ∀ (t : PTree Sig.sym X), t ∈ ts → WF Sig.arity t := by
+      simpa [WF] using ht
+    right; use f, ts.attach.map (fun ⟨t, h⟩ => ⟨t, hts t h⟩)
+    simpa
+
+instance instGetElemTerm : GetElem (Term Sig X) (List ℕ) (Term Sig X) (fun t => t.t.IsPosi) where
+  getElem t p hp := ⟨t.t[p], t.wf.getElem hp⟩
+
+instance instHasSubstitutionTerm : HasSubstitution (Term Sig X) (List ℕ) (Term Sig X) where
+  subst s p t := ⟨s.t[p := t.t], s.wf.subst t.wf p⟩
+
+end Cslib.Term

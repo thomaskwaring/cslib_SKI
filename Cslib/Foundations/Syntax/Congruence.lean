@@ -17,4 +17,18 @@ namespace Cslib
 class Congruence (α : Type*) [HasContext α] (r : α → α → Prop) extends
   IsEquiv α r, covariant : CovariantClass (HasContext.Context α) α (·[·]) r
 
+lemma Congruence.iff_covariantClass_and_equivalence {α : Type*} [HasContext α] (r : α → α → Prop) :
+    Congruence α r ↔ CovariantClass (HasContext.Context α) α (·[· ]) r ∧ Equivalence r := by
+  constructor
+  · intro h
+    refine ⟨⟨h.elim⟩, ?_, ?_, ?_⟩
+    all_goals grind [h.refl, h.symm, h.trans]
+  · intro ⟨hco, hrefl, hsymm, htrans⟩
+    have : Std.Refl r := by grind [Std.Refl]
+    have : Std.Symm r := by grind [Std.Symm]
+    have : IsTrans α r := by grind [IsTrans]
+    have : IsPreorder α r := by constructor
+    have : IsEquiv α r := by constructor
+    constructor
+
 end Cslib
