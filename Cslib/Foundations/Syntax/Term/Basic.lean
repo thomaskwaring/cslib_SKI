@@ -56,14 +56,14 @@ lemma WF.getElem {t : PTree S X} (h : t.WF arity) {p : List ℕ} (hp : t.IsPosi 
     obtain (⟨x, rfl⟩ | ⟨f, ts, rfl, hlen, hts⟩) := h.cases
     · cases hp
     · cases hp
-      case tail hi hp => grind
+      case cons hi hp => grind
 
 lemma WF.subst {s t : PTree S X} (hs : s.WF arity) (ht : t.WF arity) (p : List ℕ) :
     s[p:=t].WF arity := by
   by_cases h : s.IsPosi p
   · induction h with
-    | emp => simpa
-    | tail f ss i hi p hp ih =>
+    | nil => simpa
+    | @cons f ss i hi p hp ih =>
       simp only [subst_node_cons_of_lt_length hi, WF, List.length_set]
       constructor
       · exact hs.length_eq
@@ -74,10 +74,10 @@ lemma WF.subst {s t : PTree S X} (hs : s.WF arity) (ht : t.WF arity) (p : List �
           exact wf_of_mem hs (ss.getElem_mem hi)
   · rwa [subst_eq_self_of_not_isPosi h]
 
-lemma WF.isSubtree {s t : PTree S X} (h : s ≤ t) (ht : t.WF arity) : s.WF arity := by
+lemma WF.of_isSubtree {s t : PTree S X} (h : s ≤ t) (ht : t.WF arity) : s.WF arity := by
   induction h with
   | refl => exact ht
-  | tail f ts t' ht' s h ih => exact ih (ht.wf_of_mem ht')
+  | child f ts t' ht' s h ih => exact ih (ht.wf_of_mem ht')
 
 end PTree
 

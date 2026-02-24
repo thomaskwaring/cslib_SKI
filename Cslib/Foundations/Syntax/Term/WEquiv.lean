@@ -41,8 +41,6 @@ def toW (t : Term Sig X) : Term.W Sig X :=
   decreasing_by
     exact ht.getChild_size_lt i
 
--- lemma toW_foo (f : Sig.sym) (ts : List (PTree Sig.sym X)) (ht : (node f ts).WF)
-
 def ofW (w : Term.W Sig X) : Term Sig X :=
   match w with
   | ⟨(Wα.leaf x), _⟩ => ⟨PTree.leaf x, WF.leaf_wf⟩

@@ -74,10 +74,6 @@ theorem Rewrites.tfae :
     intro ⟨p, h⟩; use p; exact rewritesAt_iff_exists_rewritesAtWith.mpr h
   tfae_finish
 
--- def Rewrites (E : PTree S X → PTree S X → Prop) (s t : PTree S X) : Prop :=
---   ∃ (l r : PTree S X), E l r ∧
---     ∃ (p : List ℕ) (_ : s.IsPosi p) (σ : X → PTree S X), s[p] = (l >>= σ) ∧ t = s[p := r >>= σ]
-
 def RewriteEquiv (E : PTree S X → PTree S X → Prop) := EqvGen (Rewrites E)
 
 lemma RewriteEquiv.equivalence {E : PTree S X → PTree S X → Prop} :
@@ -175,7 +171,7 @@ theorem nodeClosedSingle_iff_substClosed : NodeClosedSingle E ↔ SubstClosed E 
         simp only [hp.idx_lt_length, subst_node_cons_of_lt_length]
         have iprop := hp.idx_lt_length
         have := hE.set_set f ts (ts[i][p:=s]) (ts[i][p:=s']) ⟨i, iprop⟩
-        exact this (ih _ hp.isPosi_tail)
+        exact this (ih _ hp.of_cons)
   · intro f ts t' i h
     simpa using hE ts[i] t' (node f ts) ([i]) (by simp) h
 
@@ -283,7 +279,7 @@ theorem RewriteEquiv.minimal {E' : PTree S X → PTree S X → Prop} (hE : E ≤
 
 lemma RewriteEquiv.single (h : E s t) : (RewriteEquiv E) s t := by
   apply EqvGen.rel
-  apply Rewrites.step h IsPosi.nil (σ := pure) <;> simp
+  apply Rewrites.step h IsPosi.nil' (σ := pure) <;> simp
 
 lemma RewriteEquiv.refl (s : PTree S X) : (RewriteEquiv E) s s := EqvGen.refl _
 

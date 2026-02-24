@@ -73,12 +73,12 @@ lemma bindLeft_node {f : S} {ts : List (PTree S X)} :
 
 lemma IsPosi.bind (hp : t.IsPosi p) : (t >>= σ).IsPosi p := by
   induction p generalizing t with
-  | nil => exact IsPosi.nil
+  | nil => exact IsPosi.nil'
   | cons i p ih =>
     cases hp
-    case tail f ts hi hp =>
+    case cons f ts hi hp =>
       rw [bindLeft_node]
-      apply IsPosi.tail (hi := (List.length_map _).symm ▸ hi)
+      apply IsPosi.cons (hi := (List.length_map _).symm ▸ hi)
       simpa using ih hp
 
 lemma bind_getElem_comm (hp : t.IsPosi p) : (t >>= σ)[p]'hp.bind = t[p] >>= σ := by
@@ -86,7 +86,7 @@ lemma bind_getElem_comm (hp : t.IsPosi p) : (t >>= σ)[p]'hp.bind = t[p] >>= σ 
   | nil => simp
   | cons i p ih =>
     cases hp
-    case tail f ts hi hp =>
+    case cons f ts hi hp =>
       have : ((ts.map (· >>= σ))[i]'((List.length_map _).symm ▸ hi)).IsPosi p :=
         by simpa using hp.bind (σ := σ)
       have := getElem_cons (f := f) ((List.length_map _).symm ▸ hi) this
@@ -97,7 +97,7 @@ lemma bind_subst (hp : s.IsPosi p) : s[p:=t] >>= σ = (s >>= σ)[p := t >>= σ] 
   | nil => simp
   | cons i p ih =>
     cases hp
-    case tail f ts hi hp =>
+    case cons f ts hi hp =>
       simp only [hi, subst_node_cons_of_lt_length, bindLeft_node, List.map_set, List.length_map,
         List.getElem_map, node.injEq, true_and]
       congr

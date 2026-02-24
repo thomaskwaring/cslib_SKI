@@ -60,7 +60,7 @@ lemma IsPosi.iff_mem_positionList : p ∈ t.positionList ↔ t.IsPosi p := by
       · grind
       · intro h
         cases h
-        case tail hi h =>
+        case cons hi h =>
           use ⟨i, hi⟩
           grind
 
@@ -85,12 +85,12 @@ instance instFintypeSubtypeIsPosi : Fintype {p : List ℕ // t.IsPosi p} :=
 def getName : (t : PTree S X) → (p : List ℕ) → t.IsPosi p → (S ⊕ X)
   | leaf x, _, _ => .inr x
   | node f _, [], _ => .inl f
-  | node _ ts, i :: p, h => (ts[i]'h.idx_lt_length).getName p h.isPosi_tail
+  | node _ ts, i :: p, h => (ts[i]'h.idx_lt_length).getName p h.of_cons
 
-lemma getName_nil_eq_inr_iff : getName t ([]) IsPosi.nil = .inr x ↔ t = leaf x := by
+lemma getName_nil_eq_inr_iff : getName t ([]) IsPosi.nil' = .inr x ↔ t = leaf x := by
   cases t <;> simp [getName]
 
-lemma getName_nil_eq_inl_iff : getName t ([]) IsPosi.nil = .inl f ↔ ∃ ts, t = node f ts := by
+lemma getName_nil_eq_inl_iff : getName t ([]) IsPosi.nil' = .inl f ↔ ∃ ts, t = node f ts := by
   cases t <;> simp [getName]
 
 theorem ext_getName_of_shapeEq (s t : PTree S X) (hshape : ShapeEq s t)
@@ -99,9 +99,9 @@ theorem ext_getName_of_shapeEq (s t : PTree S X) (hshape : ShapeEq s t)
   cases t
   case leaf x =>
     apply (getName_nil_eq_inr_iff (x := x)).mp
-    simpa [getName] using hname [] IsPosi.nil
+    simpa [getName] using hname [] IsPosi.nil'
   case node f ts =>
-    have := hname [] IsPosi.nil
+    have := hname [] IsPosi.nil'
     rw [getName, getName_nil_eq_inl_iff] at this
     obtain ⟨ss, rfl⟩ := this
     congr
@@ -111,10 +111,10 @@ theorem ext_getName_of_shapeEq (s t : PTree S X) (hshape : ShapeEq s t)
     apply ext_getName_of_shapeEq
     · intro p hsp
       apply hname (i :: p)
-      apply IsPosi.node <;> simpa
+      apply IsPosi.cons <;> simpa
     · intro p
       have := hshape (i :: p)
-      grind [IsPosi.tail]
+      grind [IsPosi.cons]
   termination_by t.size
 
 theorem ext_getName_shapeEq_iff (s t : PTree S X) :
@@ -144,8 +144,8 @@ inductive IsLeafPosi : (t : PTree S X) → List ℕ → Prop where
 
 lemma IsLeafPosi.isPosi (h : t.IsLeafPosi p) : t.IsPosi p := by
   induction h with
-  | leaf _ => exact IsPosi.nil
-  | node _ _ _ hi _ _ ih => exact IsPosi.node hi ih
+  | leaf _ => exact IsPosi.nil'
+  | node _ _ _ hi _ _ ih => exact ih.cons hi
 
 lemma IsLeafPosi.getElem (h : t.IsLeafPosi p) : ∃ x : X, t[p]'h.isPosi = PTree.leaf x := by
   induction h with
@@ -163,8 +163,8 @@ lemma isLeafPosi_iff_getElem?_eq : t.IsLeafPosi p ↔ ∃ x, t[p]? = some (leaf 
   · intro ⟨x, hx⟩
     replace ⟨h, hx⟩ := getElem_of_getElem? hx
     induction h with
-    | emp => rw [getElem_nil] at hx; exact hx ▸ IsLeafPosi.leaf x
-    | tail _ _ _ hi _ hp ih =>
+    | nil => rw [getElem_nil] at hx; exact hx ▸ IsLeafPosi.leaf x
+    | cons hi hp ih =>
       apply IsLeafPosi.node _ _ _ hi _
       apply ih
       rwa [getElem_cons hi hp] at hx

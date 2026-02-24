@@ -48,7 +48,7 @@ lemma isLeaf_eq_true_iff_exists {s : PTree S X} : s.isLeaf ↔ ∃ x, s = leaf x
 
 inductive IsSubtree : PTree S X → PTree S X → Prop
   | refl (t : PTree S X) : t.IsSubtree t
-  | tail (f : S) (ts : List (PTree S X)) (t' : PTree S X) (ht' : t' ∈ ts) (s : PTree S X) :
+  | child (f : S) (ts : List (PTree S X)) (t' : PTree S X) (ht' : t' ∈ ts) (s : PTree S X) :
     s.IsSubtree t' → s.IsSubtree (node f ts)
 
 attribute [refl] IsSubtree.refl
@@ -56,7 +56,7 @@ attribute [refl] IsSubtree.refl
 lemma IsSubtree.size_le {s t : PTree S X} (h : s.IsSubtree t) : s.size ≤ t.size := by
   induction h
   case refl => rfl
-  case tail f ts t' ht' s hst' ih =>
+  case child f ts t' ht' s hst' ih =>
     apply le_trans ih
     have : t'.size ≤ (ts.map size).sum := (ts.map size).le_sum_of_mem <| List.mem_map_of_mem ht'
     grind [size]
@@ -65,7 +65,7 @@ lemma IsSubtree.eq_of_size_eq (s t : PTree S X) (h : s.IsSubtree t)
     (h' : s.size = t.size) : s = t := by
   cases h
   case refl => rfl
-  case tail f ts t' ht' hst' =>
+  case child f ts t' ht' hst' =>
     suffices s.size < (node f ts).size by absurd h'; exact this.ne
     have : t'.size ≤ (ts.map size).sum := (ts.map size).le_sum_of_mem <| List.mem_map_of_mem ht'
     grind [size, size_le hst']
@@ -76,8 +76,8 @@ instance instPartialOrderPTree : PartialOrder (PTree S X) where
   le_trans s t u hst htu := by
     induction htu
     case refl => assumption
-    case tail f us u' hu' t ht ih =>
-      exact PTree.IsSubtree.tail f us u' hu' _ (ih hst)
+    case child f us u' hu' t ht ih =>
+      exact PTree.IsSubtree.child f us u' hu' _ (ih hst)
   le_antisymm s t hst hts := by
     have hst_size := hst.size_le
     have hts_size := hts.size_le
@@ -85,21 +85,23 @@ instance instPartialOrderPTree : PartialOrder (PTree S X) where
     exact hst.eq_of_size_eq s t this
 
 inductive IsPosi : (t : PTree S X) → List ℕ → Prop
-  | emp (t : PTree S X) : IsPosi t ([])
-  | tail (f : S) (ts : List (PTree S X)) (i : ℕ) (hi : i < ts.length) (p : List ℕ) :
-      ts[i].IsPosi p → (node f ts).IsPosi (i :: p)
+  | nil (t : PTree S X) : IsPosi t ([])
+  | cons {f : S} {ts : List (PTree S X)} {i : ℕ} (hi : i < ts.length) {p : List ℕ}
+      (hp : ts[i].IsPosi p) : (node f ts).IsPosi (i :: p)
 
--- attribute [scoped grind .] IsPosi.tail IsPosi.emp
+attribute [scoped grind .] IsPosi.nil
 attribute [scoped grind cases] IsPosi
 
-@[scoped grind .]
-lemma IsPosi.nil {t : PTree S X} : t.IsPosi [] := IsPosi.emp t
+lemma IsPosi.nil' {t : PTree S X} : t.IsPosi ([]) := .nil _
 
 -- scoped macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| apply IsPosi.nil)
 
-@[scoped grind .]
-lemma IsPosi.node {f : S} {ts : List (PTree S X)} {i : ℕ} (hi : i < ts.length) {p : List ℕ}
-    (hp : ts[i].IsPosi p) : (node f ts).IsPosi (i :: p) := IsPosi.tail f ts i hi p hp
+@[scoped grind =]
+lemma IsPosi.node_iff {f : S} {ts : List (PTree S X)} {i : ℕ} {p : List ℕ} :
+    (node f ts).IsPosi (i :: p) ↔ ∃ hi : i < ts.length, ts[i].IsPosi p := by
+  refine ⟨fun h => ?_, fun ⟨hi, hp⟩ => IsPosi.cons hi hp⟩
+  cases h
+  case cons hi hp => exact ⟨hi, hp⟩
 
 lemma IsPosi.not_leaf_cons {x : X} {i : ℕ} {p : List ℕ} (h : (leaf (S := S) x).IsPosi (i :: p)) :
   False := by cases h
@@ -108,7 +110,7 @@ lemma IsPosi.not_leaf_cons {x : X} {i : ℕ} {p : List ℕ} (h : (leaf (S := S) 
 lemma IsPosi.idx_lt_length {f : S} {ts : List (PTree S X)} {i : ℕ} {p : List ℕ}
   (h : (PTree.node f ts).IsPosi (i :: p)) : i < ts.length := by cases h; assumption
 
-lemma IsPosi.isPosi_tail {f : S} {ts : List (PTree S X)} {i : ℕ} {p : List ℕ}
+lemma IsPosi.of_cons {f : S} {ts : List (PTree S X)} {i : ℕ} {p : List ℕ}
     (h : (PTree.node f ts).IsPosi (i :: p)) : (ts[i]'h.idx_lt_length).IsPosi p := by
   cases h
   assumption
@@ -122,10 +124,10 @@ theorem IsPosi.prefix {t : PTree S X} {p q : List ℕ} (hq : t.IsPosi q) (hpq : 
     t.IsPosi p := by
   obtain ⟨q, rfl⟩ := hpq
   induction p generalizing t with
-  | nil => exact IsPosi.nil
+  | nil => exact IsPosi.nil'
   | cons i p ih =>
     cases hq
-    case tail _ _ hi h => exact (ih h).node hi
+    case cons _ _ hi h => exact (ih h).cons hi
 
 @[scoped grind →]
 theorem IsPosi.prefix' {t : PTree S X} {p q : List ℕ} (hq : t.IsPosi (p ++ q)) : t.IsPosi p :=
@@ -133,7 +135,7 @@ theorem IsPosi.prefix' {t : PTree S X} {p q : List ℕ} (hq : t.IsPosi (p ++ q))
 
 theorem IsPosi.head_succ {f : S} {t : PTree S X} {ts : List (PTree S X)} {i : ℕ} {p : List ℕ} :
     (PTree.node f (t :: ts)).IsPosi ((i + 1) :: p) ↔ (PTree.node f ts).IsPosi (i :: p) := by
-  constructor <;> intro h <;> cases h <;> apply node <;> grind
+  constructor <;> intro h <;> cases h <;> apply IsPosi.cons <;> grind
 
 def isPosiBool : List ℕ → PTree S X → Bool
   | [], _ => true
@@ -143,7 +145,7 @@ def isPosiBool : List ℕ → PTree S X → Bool
   | ((i + 1) :: p), node f (_ :: ts) => isPosiBool (i :: p) (node f ts)
 
 lemma isPosiBool_iff_IsPosi : (p : List ℕ) → (t : PTree S X) → (isPosiBool p t ↔ t.IsPosi p)
-  | [], _ => by simpa [isPosiBool] using IsPosi.nil
+  | [], _ => by simpa [isPosiBool] using IsPosi.nil'
   | (_ :: _), leaf _ => by
     constructor <;> intro h
     · simp [isPosiBool] at h
@@ -154,9 +156,9 @@ lemma isPosiBool_iff_IsPosi : (p : List ℕ) → (t : PTree S X) → (isPosiBool
   | (0 :: p), PTree.node _ (t :: ts) => by
     constructor <;> intro h
     · rw [isPosiBool, isPosiBool_iff_IsPosi] at h
-      apply IsPosi.tail <;> grind
+      apply IsPosi.cons <;> grind
     · cases h
-      case tail hi hp =>
+      case cons hi hp =>
         rw [isPosiBool, isPosiBool_iff_IsPosi]
         simpa using hp
   | ((i + 1) :: p), PTree.node f (t :: ts) => by
@@ -175,11 +177,11 @@ instance instGetElemPTreePos : GetElem (PTree S X) (List ℕ) (PTree S X) IsPosi
   getElem := getElemPos
 
 @[simp, grind =]
-lemma getElem_nil {t : PTree S X} : t[[]]'IsPosi.nil = t := by simp [getElem, getElemPos]
+lemma getElem_nil {t : PTree S X} : t[[]]'(IsPosi.nil') = t := by simp [getElem, getElemPos]
 
 @[simp, scoped grind =]
 lemma getElem_cons {f : S} {ts : List (PTree S X)} {i : ℕ} (hi : i < ts.length) {p : List ℕ}
-    (hp : ts[i].IsPosi p) : (node f ts)[i :: p]'(hp.node hi) = ts[i][p] := by
+    (hp : ts[i].IsPosi p) : (node f ts)[i :: p]'(hp.cons hi) = ts[i][p] := by
   simp_rw [getElem, getElemPos]
   rfl
 
@@ -189,7 +191,7 @@ theorem IsPosi.suffix {t : PTree S X} {p q : List ℕ} (h : t.IsPosi (p ++ q)) :
   | nil => simpa
   | cons i p ih =>
     cases h
-    case tail f ts hi h => exact ih h
+    case cons f ts hi h => exact ih h
 
 @[grind →]
 lemma IsPosi_append {t : PTree S X} {p q : List ℕ} (hp : t.IsPosi p) (hq : t[p].IsPosi q) :
@@ -198,7 +200,7 @@ lemma IsPosi_append {t : PTree S X} {p q : List ℕ} (hp : t.IsPosi p) (hq : t[p
   | nil => simpa
   | cons i p ih =>
     cases hp
-    apply IsPosi.tail
+    apply IsPosi.cons
     · apply ih
       · simp_all
       · assumption
@@ -216,8 +218,9 @@ theorem isSubtree_getElem {t : PTree S X} {p : List ℕ} (hp : t.IsPosi p) : t[p
   | nil => rfl
   | cons i p ih =>
     cases hp
-    case tail f ts hi h =>
-      have : ts[i].IsSubtree (node f ts) := IsSubtree.tail _ _ ts[i] (List.getElem_mem _) _ (by rfl)
+    case cons f ts hi h =>
+      have : ts[i].IsSubtree (node f ts) :=
+        IsSubtree.child _ _ ts[i] (List.getElem_mem _) _ (by rfl)
       refine le_trans ?_ this
       apply ih
 
@@ -225,14 +228,14 @@ theorem IsSubtree.exists_getElem?_eq {s t : PTree S X} (h : s ≤ t) :
     ∃ p : List ℕ, t[p]? = some s := by
   induction h with
   | refl t => use []; simp [getElem?, IsPosi.nil]
-  | tail f ts t' ht' s h ih =>
+  | child f ts t' ht' s h ih =>
     classical
     obtain ⟨p, ih⟩ := ih
     obtain ⟨hp, ih⟩ := getElem_of_getElem? ih
     use ts.idxOf t' :: p
     have hi : ts.idxOf t' < ts.length := List.idxOf_lt_length_of_mem ht'
     have : (node f ts).IsPosi (ts.idxOf t' :: p) := by
-      apply IsPosi.tail (hi := hi)
+      apply IsPosi.cons (hi := hi)
       simpa [hi]
     rw [getElem?_eq_some_iff]
     use this
@@ -291,7 +294,7 @@ lemma subst_node_cons_of_ge_length {f : S} {i : ℕ} {ss : List (PTree S X)} (hi
 lemma subst_eq_self_of_not_isPosi {s t : PTree S X} {p : List ℕ} (h : ¬ s.IsPosi p) :
     s[p:=t] = s := by
   induction p generalizing s with
-  | nil => exact False.elim <| h <| IsPosi.nil
+  | nil => exact False.elim <| h <| IsPosi.nil'
   | cons i p ih =>
     cases s
     case leaf => simp
@@ -303,7 +306,7 @@ lemma subst_eq_self_of_not_isPosi {s t : PTree S X} {p : List ℕ} (h : ¬ s.IsP
         suffices ss[i][p:=t] = ss[i] by rw [this]; exact List.set_getElem_self hi
         apply ih
         contrapose h
-        exact IsPosi.tail _ _ _ hi _ h
+        exact h.cons hi
       case neg => rw [subst_node_cons_of_ge_length]; grind
 
 @[simp, scoped grind =]
@@ -311,16 +314,16 @@ lemma Context.fill_eq : c[t] = c.tree[c.p := t] := rfl
 
 lemma IsPosi.subst (h : s.IsPosi p) : s[p:=t].IsPosi p := by
   induction h with
-  | emp s => exact IsPosi.nil
-  | tail _ ts i hi p h ih => grind
+  | nil s => exact IsPosi.nil'
+  | cons => grind
 
 lemma Context.isPosi_fill : c[t].IsPosi c.p := c.isPosi_p.subst
 
 @[scoped grind =]
 lemma getElem_subst_self_of_IsPosi (h : s.IsPosi p) : s[p:=t][p]'h.subst = t := by
   induction h with
-  | emp s => simp
-  | tail f  ts i hi p h ih => grind
+  | nil s => simp
+  | cons => grind
 
 lemma Context.getElem_fill_self : c[t][c.p]'c.isPosi_fill = t :=
   getElem_subst_self_of_IsPosi c.isPosi_p
@@ -344,7 +347,7 @@ lemma subst_append_subst (hp : s.IsPosi p) (_ : t.IsPosi q) :
   | nil => simp
   | cons i p ih =>
     cases hp
-    case tail f ts hi h =>
+    case cons f ts hi h =>
       simp only [hi, subst_node_cons_of_lt_length, List.cons_append, List.length_set,
         List.getElem_set_self, List.set_set, node.injEq, true_and]
       apply List.ext_get (by simp)
@@ -360,7 +363,7 @@ lemma getElem_prefix_subst_append (h : s.IsPosi (p ++ q)) :
   | nil => simp
   | cons i p ih =>
     cases h
-    case tail f ts hi h =>
+    case cons f ts hi h =>
       simp only [List.cons_append, subst_def, subst, hi, ↓reduceDIte]
       rw [getElem_cons hi h.prefix', getElem_cons (by simpa)]
       · simp_rw [subst_def] at ih
@@ -374,7 +377,7 @@ lemma subst_subst_append (h : s.IsPosi (p ++ q)) :
   | nil => simp
   | cons i p ih =>
     cases h
-    case tail f ts hi h =>
+    case cons f ts hi h =>
       simp only [List.cons_append, subst_def, subst, hi, ↓reduceDIte, List.length_set,
         List.set_set, List.getElem_set_self, node.injEq, true_and]
       congr 1
@@ -426,15 +429,15 @@ lemma IsPosi.subst_of_not_prefix (hp : s.IsPosi p) (h : ¬ q <+: p) : s[q:=t].Is
   | nil => grind
   | cons j q ih =>
     cases hp
-    case emp => grind
-    case tail f ss i hi p hp =>
+    case nil => grind
+    case cons f ss i hi p hp =>
       obtain (hij | ⟨rfl, hpq⟩) := not_prefix_cons_iff.mp h
       · simp_rw [subst_def, PTree.subst]
         grind
       · simp_rw [subst_def, PTree.subst]
         split
         case isTrue h =>
-          apply IsPosi.tail
+          apply IsPosi.cons
           · rw [List.getElem_set_self]
             · exact ih hp hpq
             · grind
@@ -446,10 +449,10 @@ lemma getElem_subst_eq_getElem_of_parallel (hp : s.IsPosi p) (hq : s.IsPosi q) (
   | nil => grind
   | cons i p ih =>
     cases hp
-    case tail f ss hi hp =>
+    case cons f ss hi hp =>
     cases hq
-    case emp => grind
-    case tail j q hj hq =>
+    case nil => grind
+    case cons j q hj hq =>
     simp_rw [getElem_cons hj hq, subst_def, subst, hi, reduceDIte]
     have hj_set : j < (ss.set i <| ss[i].subst t p).length := by simpa
     obtain (hij | ⟨rfl, hpq⟩) := parallel_cons_iff'.mp h
@@ -468,10 +471,10 @@ lemma subst_subst_comm_of_parallel (hp : s.IsPosi p) (hq : s.IsPosi q) (h : p ||
   | nil => grind
   | cons i p ih =>
     cases hp
-    case tail f ss hi hp =>
+    case cons f ss hi hp =>
     cases hq
-    case emp => grind
-    case tail j q hj hq =>
+    case nil => grind
+    case cons j q hj hq =>
     simp_rw [subst_def, subst, hi, hj, reduceDIte, subst, List.length_set, hi, hj, reduceDIte]
     congr 1
     apply List.ext_get (by simp)
