@@ -19,7 +19,7 @@ variable {S X : Type*} {Sig : Signature}
 
 inductive Wα (Sig : Signature) (X : Type _) : Type _ where
   | leaf : (x : X) → Wα Sig X
-  | node : (f : Sig.sym) → Wα Sig X
+  | node : (f : Sig.Sym) → Wα Sig X
 
 @[expose]
 def Wβ (Sig : Signature) (X : Type _) : Wα Sig X → Type _
@@ -46,7 +46,7 @@ def ofW (w : Term.W Sig X) : Term Sig X :=
   | ⟨(Wα.leaf x), _⟩ => ⟨PTree.leaf x, WF.leaf_wf⟩
   | ⟨Wα.node f, ts⟩ => consNode f (List.ofFn (fun i => ofW (ts i))) (by simp)
 
-lemma left_inv_W (t : PTree Sig.sym X) (ht : t.WF Sig.arity) :
+lemma left_inv_W (t : PTree Sig.Sym X) (ht : t.WF Sig.arity) :
     ofW (⟨t, ht⟩ : Term Sig X).toW = ⟨t, ht⟩ := by
   cases t
   case leaf => simp [toW, ofW]
