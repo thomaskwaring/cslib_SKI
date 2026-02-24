@@ -27,6 +27,25 @@ def size : PTree S X → ℕ
   | leaf _ => 1
   | node f ts => 1 + (ts.map size).sum
 
+@[simp]
+lemma size_node {f : S} {ts : List (PTree S X)} : (node f ts).size = 1 + (ts.map size).sum :=
+  by simp [size]
+
+@[grind .]
+lemma size_getElem_lt_size {f : S} {ts : List (PTree S X)} {i : ℕ} (hi : i < ts.length) :
+    ts[i].size < (node f ts).size := by
+  have : ts[i].size ≤ (ts.map size).sum :=
+    List.le_sum_of_mem <| List.mem_map_of_mem <| List.getElem_mem hi
+  grind [size]
+
+def isLeaf : (s : PTree S X) → Bool
+  | leaf _ => true
+  | node _ _ => false
+
+lemma isLeaf_eq_true_iff_exists {s : PTree S X} : s.isLeaf ↔ ∃ x, s = leaf x := by
+  cases s
+  all_goals simp [isLeaf]
+
 inductive IsSubtree : PTree S X → PTree S X → Prop
   | refl (t : PTree S X) : t.IsSubtree t
   | tail (f : S) (ts : List (PTree S X)) (t' : PTree S X) (ht' : t' ∈ ts) (s : PTree S X) :
@@ -76,6 +95,8 @@ attribute [scoped grind cases] IsPosi
 @[scoped grind .]
 lemma IsPosi.nil {t : PTree S X} : t.IsPosi [] := IsPosi.emp t
 
+-- scoped macro_rules | `(tactic| get_elem_tactic_extensible) => `(tactic| apply IsPosi.nil)
+
 @[scoped grind .]
 lemma IsPosi.node {f : S} {ts : List (PTree S X)} {i : ℕ} (hi : i < ts.length) {p : List ℕ}
     (hp : ts[i].IsPosi p) : (node f ts).IsPosi (i :: p) := IsPosi.tail f ts i hi p hp
@@ -87,7 +108,7 @@ lemma IsPosi.not_leaf_cons {x : X} {i : ℕ} {p : List ℕ} (h : (leaf (S := S) 
 lemma IsPosi.idx_lt_length {f : S} {ts : List (PTree S X)} {i : ℕ} {p : List ℕ}
   (h : (PTree.node f ts).IsPosi (i :: p)) : i < ts.length := by cases h; assumption
 
-lemma IsPosi.IsPosi_tail {f : S} {ts : List (PTree S X)} {i : ℕ} {p : List ℕ}
+lemma IsPosi.isPosi_tail {f : S} {ts : List (PTree S X)} {i : ℕ} {p : List ℕ}
     (h : (PTree.node f ts).IsPosi (i :: p)) : (ts[i]'h.idx_lt_length).IsPosi p := by
   cases h
   assumption
@@ -219,7 +240,7 @@ theorem IsSubtree.exists_getElem?_eq {s t : PTree S X} (h : s ≤ t) :
     simpa [hi]
 
 theorem IsSubtree.exists_isPosi_getElem_eq {s t : PTree S X} (h : s.IsSubtree t) :
-    ∃ (p : List ℕ) (h : t.IsPosi p), t[p]'h = s := by
+    ∃ (p : List ℕ) (h : t.IsPosi p), t[p] = s := by
   obtain ⟨p, hp⟩ := h.exists_getElem?_eq
   use p
   simpa [getElem?_eq_some_iff] using hp
@@ -233,10 +254,7 @@ def subst (t u : PTree S X) (p : List ℕ) : PTree S X :=
       node f <| ts.set i <| ts[i].subst u p else
       (node f ts)
   termination_by t.size
-  decreasing_by
-    have : ts[i].size ≤ (ts.map size).sum :=
-      List.le_sum_of_mem <| List.mem_map_of_mem <| List.getElem_mem hi
-    grind [size]
+  decreasing_by exact size_getElem_lt_size hi
 
 instance instHasSubstitutionPTree : HasSubstitution (PTree S X) (List ℕ) (PTree S X) where
   subst t p u := t.subst u p

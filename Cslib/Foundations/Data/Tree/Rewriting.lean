@@ -15,13 +15,70 @@ namespace Cslib.PTree
 
 open Relation
 
-variable {S X : Type _} {s t u : PTree S X}
+variable {S X : Type _} {s t u : PTree S X} {E : PTree S X → PTree S X → Prop} {p : List ℕ}
+  {σ : X → PTree S X}
 
-def RewriteStep (E : PTree S X → PTree S X → Prop) (s t : PTree S X) : Prop :=
-  ∃ (l r : PTree S X), E l r ∧
-    ∃ (p : List ℕ) (_ : s.IsPosi p) (σ : X → PTree S X), s[p] = (l >>= σ) ∧ t = s[p := r >>= σ]
+inductive RewritesAtWith (E : PTree S X → PTree S X → Prop) :
+    List ℕ → (X → PTree S X) → PTree S X → PTree S X → Prop where
+  | step_at_with {s t l r : PTree S X} (hlr : E l r) {p : List ℕ} (hp : s.IsPosi p)
+      {σ : X → PTree S X} (hs : s[p] = (l >>= σ)) (ht : t = s[p := r >>= σ]) :
+      RewritesAtWith E p σ s t
 
-def RewriteEquiv (E : PTree S X → PTree S X → Prop) := EqvGen (RewriteStep E)
+inductive RewritesAt (E : PTree S X → PTree S X → Prop) :
+    List ℕ → PTree S X → PTree S X → Prop where
+  | step_at {s t l r : PTree S X} (hlr : E l r) {p : List ℕ} (hp : s.IsPosi p) {σ : X → PTree S X}
+    (hs : s[p] = (l >>= σ)) (ht : t = s[p := r >>= σ]) : RewritesAt E p s t
+
+inductive Rewrites (E : PTree S X → PTree S X → Prop) :
+    PTree S X → PTree S X → Prop where
+  | step {s t l r : PTree S X} (hlr : E l r) {p : List ℕ} (hp : s.IsPosi p) {σ : X → PTree S X}
+    (hs : s[p] = (l >>= σ)) (ht : t = s[p := r >>= σ]) : Rewrites E s t
+
+attribute [scoped grind cases] RewritesAtWith RewritesAt Rewrites
+attribute [scoped grind <=] RewritesAtWith.step_at_with RewritesAt.step_at Rewrites.step
+
+@[grind =]
+lemma RewritesAtWith.iff_exists : RewritesAtWith E p σ s t ↔ ∃ (l r : PTree S X), E l r ∧
+    ∃ (_ : s.IsPosi p), s[p] = (l >>= σ) ∧ t = s[p := r >>= σ] := by grind
+
+@[grind =]
+lemma RewritesAt.iff_exists : RewritesAt E p s t ↔ ∃ (l r : PTree S X), E l r ∧
+    ∃ (_ : s.IsPosi p) (σ : X → PTree S X), s[p] = (l >>= σ) ∧ t = s[p := r >>= σ] := by grind
+
+@[grind =]
+lemma Rewrites.iff_exists : Rewrites E s t ↔ ∃ (l r : PTree S X), E l r ∧ ∃ (p : List ℕ)
+    (_ : s.IsPosi p) (σ : X → PTree S X), s[p] = (l >>= σ) ∧ t = s[p := r >>= σ] := by grind
+
+@[grind =]
+lemma rewritesAt_iff_exists_rewritesAtWith :
+    RewritesAt E p s t ↔ ∃ σ, RewritesAtWith E p σ s t := by
+  constructor
+  · rw [RewritesAt.iff_exists]; intro ⟨_, _, _, _, σ, _⟩; use σ; grind
+  · grind
+
+lemma rewrites_iff_exists_rewritesAt :
+    Rewrites E s t ↔ ∃ p, RewritesAt E p s t := by
+  constructor
+  · rw [Rewrites.iff_exists]; intro ⟨_, _, _, p, _⟩; use p; grind
+  · grind
+
+theorem Rewrites.tfae :
+    [Rewrites E s t, ∃ p, RewritesAt E p s t, ∃ p σ, RewritesAtWith E p σ s t,
+    ∃ (l r : PTree S X), E l r ∧ ∃ (p : List ℕ)
+    (_ : s.IsPosi p) (σ : X → PTree S X), s[p] = (l >>= σ) ∧ t = s[p := r >>= σ]].TFAE := by
+  tfae_have 1 ↔ 2 := rewrites_iff_exists_rewritesAt
+  tfae_have 1 ↔ 4 := Rewrites.iff_exists
+  tfae_have 2 → 3 := by
+    intro ⟨p, h⟩; use p; exact rewritesAt_iff_exists_rewritesAtWith.mp h
+  tfae_have 3 → 2 := by
+    intro ⟨p, h⟩; use p; exact rewritesAt_iff_exists_rewritesAtWith.mpr h
+  tfae_finish
+
+-- def Rewrites (E : PTree S X → PTree S X → Prop) (s t : PTree S X) : Prop :=
+--   ∃ (l r : PTree S X), E l r ∧
+--     ∃ (p : List ℕ) (_ : s.IsPosi p) (σ : X → PTree S X), s[p] = (l >>= σ) ∧ t = s[p := r >>= σ]
+
+def RewriteEquiv (E : PTree S X → PTree S X → Prop) := EqvGen (Rewrites E)
 
 lemma RewriteEquiv.equivalence {E : PTree S X → PTree S X → Prop} :
   Equivalence (RewriteEquiv E) := by exact EqvGen.is_equivalence _
@@ -42,12 +99,13 @@ def SubstClosed (E : PTree S X → PTree S X → Prop) : Prop :=
 
 variable {E : PTree S X → PTree S X → Prop}
 
-lemma RewriteStep.self (l r : PTree S X) (hlr : E l r) (p : List ℕ) (hp : s.IsPosi p)
-    (σ : X → PTree S X) (hs : s[p] = l >>= σ) : RewriteStep E s (s[p := r >>= σ]) := by
-  use l, r, hlr, p, hp, σ
+lemma Rewrites.self (l r : PTree S X) (hlr : E l r) (p : List ℕ) (hp : s.IsPosi p)
+    (σ : X → PTree S X) (hs : s[p] = l >>= σ) : Rewrites E s (s[p := r >>= σ]) := by
+  grind
 
-lemma RewriteStep.mapVarClosed : MapVarClosed (RewriteStep E) := by
+lemma Rewrites.mapVarClosed : MapVarClosed (Rewrites E) := by
   intro σ s t h
+  rw [Rewrites.iff_exists] at h ⊢
   obtain ⟨l, r, hlr, q, hq, ρ, hs, rfl⟩ := h
   use l, r, hlr, q, hq.bind, fun x => (ρ x) >>= σ
   constructor
@@ -56,16 +114,19 @@ lemma RewriteStep.mapVarClosed : MapVarClosed (RewriteStep E) := by
     congr 1
     simp
 
-lemma RewriteStep.substClosed : SubstClosed (RewriteStep E) := by
+lemma Rewrites.substClosed : SubstClosed (Rewrites E) := by
   intro s s' t p hp h
+  rw [Rewrites.iff_exists] at h
   obtain ⟨l, r, hlr, q, hq, σ, hs, rfl⟩ := h
   rw [← subst_append_subst (hp := by grind) hq]
-  refine RewriteStep.self l r hlr _ ?_ σ ?_
+  refine Rewrites.self l r hlr _ ?_ σ ?_
   all_goals grind
 
-lemma RewriteStep.minimal {E E' : PTree S X → PTree S X → Prop} (hrel : E ≤ E')
-    (hmap : MapVarClosed E') (hsubst : SubstClosed E') : RewriteStep E ≤ E' := by
-  rintro s t ⟨l, r, hlr, p, hp, σ, hs, rfl⟩
+lemma Rewrites.minimal {E E' : PTree S X → PTree S X → Prop} (hrel : E ≤ E')
+    (hmap : MapVarClosed E') (hsubst : SubstClosed E') : Rewrites E ≤ E' := by
+  intro s t
+  rw [Rewrites.iff_exists]
+  rintro ⟨l, r, hlr, p, hp, σ, hs, rfl⟩
   suffices E' (s[p:=l >>= σ]) (s[p:=r >>= σ]) by
     rw (occs := [1]) [← subst_refl hp, hs]
     assumption
@@ -114,7 +175,7 @@ theorem nodeClosedSingle_iff_substClosed : NodeClosedSingle E ↔ SubstClosed E 
         simp only [hp.idx_lt_length, subst_node_cons_of_lt_length]
         have iprop := hp.idx_lt_length
         have := hE.set_set f ts (ts[i][p:=s]) (ts[i][p:=s']) ⟨i, iprop⟩
-        exact this (ih _ hp.IsPosi_tail)
+        exact this (ih _ hp.isPosi_tail)
   · intro f ts t' i h
     simpa using hE ts[i] t' (node f ts) ([i]) (by simp) h
 
@@ -192,7 +253,7 @@ theorem MapVarClosed.eqvGen (h : MapVarClosed E) : MapVarClosed (EqvGen E) := by
   induction h <;> grind [EqvGen, MapVarClosed]
 
 theorem RewriteEquiv.mapVarClosed : MapVarClosed (RewriteEquiv E) :=
-  MapVarClosed.eqvGen RewriteStep.mapVarClosed
+  MapVarClosed.eqvGen Rewrites.mapVarClosed
 
 theorem SubstClosed.eqvGen (h : SubstClosed E) : SubstClosed (EqvGen E) := by
   intro s s' t p hp h
@@ -201,7 +262,7 @@ theorem SubstClosed.eqvGen (h : SubstClosed E) : SubstClosed (EqvGen E) := by
 theorem RewriteEquiv.nodeClosed : NodeClosed (RewriteEquiv E) := by
   rw [nodeClosed_iff_nodeClosedSingle_of_equivalence RewriteEquiv.equivalence,
     nodeClosedSingle_iff_substClosed]
-  exact SubstClosed.eqvGen RewriteStep.substClosed
+  exact SubstClosed.eqvGen Rewrites.substClosed
 
 private lemma EqvGen.minimal {α : Type*} {r r' : α → α → Prop} (hle : r ≤ r')
     (heqv : Equivalence r') : EqvGen r ≤ r' := by
@@ -218,12 +279,11 @@ theorem RewriteEquiv.minimal {E' : PTree S X → PTree S X → Prop} (hE : E ≤
   refine EqvGen.minimal ?_ hE'_eqv
   rw [nodeClosed_iff_nodeClosedSingle_of_equivalence hE'_eqv,
     nodeClosedSingle_iff_substClosed] at hE'_node
-  apply RewriteStep.minimal hE hE'_map hE'_node
+  apply Rewrites.minimal hE hE'_map hE'_node
 
 lemma RewriteEquiv.single (h : E s t) : (RewriteEquiv E) s t := by
   apply EqvGen.rel
-  use s, t, h, [], IsPosi.nil, pure
-  simp
+  apply Rewrites.step h IsPosi.nil (σ := pure) <;> simp
 
 lemma RewriteEquiv.refl (s : PTree S X) : (RewriteEquiv E) s s := EqvGen.refl _
 
@@ -232,7 +292,7 @@ lemma RewriteEquiv.symm (h : (RewriteEquiv E) s t) : (RewriteEquiv E) t s := Eqv
 lemma RewriteEquiv.trans (h : (RewriteEquiv E) s t) (h' : (RewriteEquiv E) t u) :
     (RewriteEquiv E) s u := EqvGen.trans _ _ _ h h'
 
-lemma RewriteEquiv.map_var (σ : X → PTree S X) (h : (RewriteEquiv E) s t) :
+lemma RewriteEquiv.bind (σ : X → PTree S X) (h : (RewriteEquiv E) s t) :
   (RewriteEquiv E) (s >>= σ) (t >>= σ) := RewriteEquiv.mapVarClosed _ _ _ h
 
 lemma RewriteEquiv.node (f : S) {tss : List (PTree S X × PTree S X)}

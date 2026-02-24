@@ -25,6 +25,8 @@ def WF (arity : S → ℕ) : PTree S X → Prop
   | leaf _ => True
   | node f ts => ts.length = arity f ∧ ∀ t ∈ ts, t.WF arity
 
+lemma WF.leaf_wf {x : X} : (leaf x).WF arity := by simp [WF]
+
 @[grind →]
 lemma WF.length_eq {f : S} {ts : List (PTree S X)} (h : (node f ts).WF arity) :
     ts.length = arity f := by grind [WF]
@@ -83,6 +85,43 @@ structure Term (Sig : Signature) (X : Type _) where
   t : PTree Sig.sym X
   wf : t.WF Sig.arity
 
+namespace PTree
+
+def WF.childTerms {Sig : Signature} {X : Type _} {f : Sig.sym} {ts : List (PTree Sig.sym X)}
+    (h : (PTree.node f ts).WF Sig.arity) : List (Term Sig X) :=
+  ts.attach.map (fun ⟨t, ht⟩ => ⟨t, h.wf_of_mem ht⟩)
+
+@[simp]
+lemma WF.childTerms_length {Sig : Signature} {X : Type _} {f : Sig.sym}
+    {ts : List (PTree Sig.sym X)} (h : (PTree.node f ts).WF Sig.arity) :
+    h.childTerms.length = Sig.arity f := by
+  simpa [WF.childTerms] using h.length_eq
+
+lemma WF.childTerms_get_coe {Sig : Signature} {X : Type _} {f : Sig.sym}
+    {ts : List (PTree Sig.sym X)} (h : (PTree.node f ts).WF Sig.arity) (i : Fin (Sig.arity f)) :
+    h.childTerms[i].t = ts[i]'(by simp [h.length_eq]) := by
+  simp [WF.childTerms]
+
+def WF.getChild {Sig : Signature} {X : Type _} {f : Sig.sym} {ts : List (PTree Sig.sym X)}
+    (h : (PTree.node f ts).WF Sig.arity) (i : Fin (Sig.arity f)) : Term Sig X :=
+  h.childTerms[i]
+
+lemma WF.getChild_coe_eq {Sig : Signature} {X : Type _} {f : Sig.sym} {ts : List (PTree Sig.sym X)}
+    (h : (PTree.node f ts).WF Sig.arity) (i : Fin (Sig.arity f)) :
+  (h.getChild i).t = h.childTerms[i].t := by simp [getChild]
+
+open PTree in
+lemma WF.getChild_size_lt {Sig : Signature} {X : Type _} {f : Sig.sym}
+    {ts : List (PTree Sig.sym X)} (h : (PTree.node f ts).WF Sig.arity)
+    (i : Fin (Sig.arity f)) :
+    (h.getChild i).t.size < (PTree.node f ts).size := by
+  simp only [getChild_coe_eq, childTerms, Fin.getElem_fin, List.getElem_map, List.getElem_attach,
+    size_node, Nat.lt_one_add_iff]
+  apply List.le_sum_of_mem
+  grind
+
+end PTree
+
 namespace Term
 
 open PTree
@@ -91,6 +130,12 @@ variable {Sig : Signature} {X : Type _} {s t u : Term Sig X}
 
 instance instCoeTermPTree : Coe (Term Sig X) (PTree Sig.sym X) where
   coe := Term.t
+
+def consNode (f : Sig.sym) (ts : List (Term Sig X)) (hts : ts.length = Sig.arity f) : Term Sig X :=
+  ⟨node f (ts.map Term.t), by simpa [WF, hts] using fun a _ => a.wf⟩
+
+lemma consNode_coe_eq {f : Sig.sym} {ts : List (Term Sig X)} (hts : ts.length = Sig.arity f) :
+  (consNode f ts hts).t = node f (ts.map Term.t) := by simp [consNode]
 
 /--
 The following result can be used to deconstruct a `Term` by cases on its underlying tree, for
@@ -110,11 +155,8 @@ lemma wf_cases (t : Term Sig X) :
   cases t
   case leaf x => left; use x
   case node f ts =>
-    obtain ⟨hlen, hts⟩ :
-        ts.length = Sig.arity f ∧ ∀ (t : PTree Sig.sym X), t ∈ ts → WF Sig.arity t := by
-      simpa [WF] using ht
-    right; use f, ts.attach.map (fun ⟨t, h⟩ => ⟨t, hts t h⟩)
-    simpa
+    right; use f, ht.childTerms
+    simpa [WF.childTerms] using ht.length_eq
 
 instance instGetElemTerm : GetElem (Term Sig X) (List ℕ) (Term Sig X) (fun t => t.t.IsPosi) where
   getElem t p hp := ⟨t.t[p], t.wf.getElem hp⟩
