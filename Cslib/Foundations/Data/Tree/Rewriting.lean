@@ -95,6 +95,21 @@ def SubstClosed (E : PTree S X → PTree S X → Prop) : Prop :=
 
 variable {E : PTree S X → PTree S X → Prop}
 
+private lemma ofFn_zip_ofFn {n : ℕ} (xs ys : Fin n → PTree S X) :
+    (List.ofFn xs).zip (List.ofFn ys) = List.ofFn (fun i => ⟨xs i, ys i⟩) := by
+  rw [←List.zip_of_prod] <;> rw [List.map_ofFn] <;> congr
+
+lemma NodeClosed.apply_ofFn (hE : NodeClosed E) (f : S) {n : ℕ} (xs ys : Fin n → PTree S X)
+    (h : ∀ i, E (xs i) (ys i)) :
+    E (node f (List.ofFn xs)) (node f (List.ofFn ys)) := by
+  have := hE f (List.zip (List.ofFn xs) (List.ofFn ys))
+  simp only [Prod.forall, List.length_ofFn, Std.le_refl, List.map_fst_zip,
+    List.map_snd_zip] at this
+  apply this
+  intro a b hab
+  obtain ⟨i, rfl, rfl⟩ : ∃ i, xs i = a ∧ ys i = b := by simpa [ofFn_zip_ofFn] using hab
+  exact h i
+
 lemma Rewrites.self (l r : PTree S X) (hlr : E l r) (p : List ℕ) (hp : s.IsPosi p)
     (σ : X → PTree S X) (hs : s[p] = l >>= σ) : Rewrites E s (s[p := r >>= σ]) := by
   grind

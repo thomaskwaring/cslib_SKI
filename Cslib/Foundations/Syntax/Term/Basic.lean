@@ -124,6 +124,9 @@ end PTree
 
 namespace Term
 
+@[ext]
+lemma ext {s t : Term S X} (h : s.t = t.t) : s = t := by cases s; cases t; simpa
+
 open PTree
 
 variable {Sig : Signature} {X : Type _} {s t u : Term Sig X}
@@ -136,6 +139,17 @@ def consNode (f : Sig.Sym) (ts : List (Term Sig X)) (hts : ts.length = Sig.arity
 
 lemma consNode_coe_eq {f : Sig.Sym} {ts : List (Term Sig X)} (hts : ts.length = Sig.arity f) :
   (consNode f ts hts).t = node f (ts.map Term.t) := by simp [consNode]
+
+def consNodeOfFn (f : Sig.Sym) (ts : Fin (Sig.arity f) → Term Sig X) : Term Sig X :=
+  ⟨node f (List.ofFn <| Term.t ∘ ts), by simpa [WF] using fun a => (ts a).wf⟩
+
+lemma consNodeOfFn_eq {f : Sig.Sym} (ts : Fin (Sig.arity f) → Term Sig X) :
+    consNodeOfFn f ts =
+      ⟨node f (List.ofFn <| Term.t ∘ ts), by simpa [WF] using fun a => (ts a).wf⟩ := by
+  simp [consNodeOfFn]
+
+-- lemma consNodeOfFn_childTerms {f : Sig.Sym} (ts : Fin (Sig.arity f) → Term Sig X) :
+--     (consNodeOfFn f ts).wf.childTerms = List.ofFn <| Term.t ∘ ts
 
 /--
 The following result can be used to deconstruct a `Term` by cases on its underlying tree, for
