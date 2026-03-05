@@ -14,6 +14,7 @@ namespace Cslib.SKI
 
 open Red MRed Relation
 
+/-- Types encoded into the SKI calculus. -/
 class Encoded (α : Type*) where
   /-- An element is represented by a term. -/
   IsEncoding : α → SKI → Prop
@@ -28,13 +29,13 @@ def IsEncoding [Encoded α] : α → SKI → Prop := Encoded.IsEncoding
 
 scoped notation x " ⊩ " a => IsEncoding a x
 
+/-- The encoding is faithful if no equivalent terms represent two distinct elements. -/
 class FaithfullyEncoded (α : Type*) extends Encoded α where
-  /-- No equivalent terms represent two distinct elements. -/
   eq_of_isEncoding_of_mJoin : {a b : α} → {x y : SKI} → (hax : x ⊩ a) →
       (hby : y ⊩ b) → (h : MJoin Red x y) → a = b
 
+/-- The encoding is fully if every element has an encoding. -/
 class FullyEncoded (α : Type*) extends Encoded α where
-  /-- Every element has an encoding. -/
   exists_isEncoding : ∀ a : α, ∃ x : SKI, x ⊩ a
 
 open FaithfullyEncoded
@@ -52,6 +53,7 @@ lemma IsEncoding.of_mRed {a : α} {x y : SKI} (ha : y ⊩ a) (h : x ↠ y) :
   | refl => assumption
   | tail h h' ih => exact ih <| ha.of_red h'
 
+/-- A term `xf` encodes a function `f : α → β` if for every `xa ⊩ a : α`, `xf ⬝ a ⊩ f a`. -/
 instance instEncodedPi (α β : Type*) [hα : Encoded α] [hβ : Encoded β] : Encoded (α → β) where
   IsEncoding f z := ∀ {a : α} {x : SKI}, (x ⊩ a) → (z ⬝ x) ⊩ (f a)
   isEncoding_of_red := by
@@ -68,6 +70,10 @@ instance instFaithfullyEncodedPi (α β : Type*) [hα : FullyEncoded α] [hβ : 
     apply hβ.eq_of_isEncoding_of_mJoin (hf hz) (hg hz)
     exact mJoin_red_head z h
 
+/-- `xp ⊩ ⟨a, b⟩` if `Fst ⬝ xp ⊩ a` and `Snd ⬝ xp ⊩ b`, where `Fst` and `Snd` are the canonical
+projections. We note that this breaks the "church encoding" pattern, which would define encodings
+of a product by its recursor, ie `xp ⊩ ⟨a, b⟩` if for every `f`, `xp ⬝ f ↠ f ⬝ xa ⬝ xb` for some
+`xa ⊩ a` and `xb ⊩ b`. -/
 instance instEncodedProd {α β : Type*} [Encoded α] [Encoded β] : Encoded (α × β) where
   IsEncoding p x := ((Fst ⬝ x) ⊩ p.1)  ∧ (Snd ⬝ x) ⊩ p.2
   isEncoding_of_red := by
@@ -78,6 +84,7 @@ instance instEncodedProd {α β : Type*} [Encoded α] [Encoded β] : Encoded (α
     · apply hp₂.of_mRed
       exact Relation.ReflTransGen.single <| red_tail Snd _ _ h
 
+/-- The pairing term `SKI.MkPair` indeed encodes `Prod.Mk`. -/
 lemma isEncoding_mkPair {α β : Type*} [Encoded α] [Encoded β] :
     SKI.MkPair ⊩ (Prod.mk : α → β → α × β) := by
   intro a xa ha b xb hb
@@ -106,6 +113,7 @@ instance instFaithfullyEncodedProd {α β : Type*} [FaithfullyEncoded α] [Faith
       exact mJoin_red_tail _ h
 
 def prodRecPoly : SKI.Polynomial 2 := &0 ⬝' (Fst ⬝' &1) ⬝' (Snd ⬝' &1)
+/-- The term which will encode `Prod.rec`. -/
 def prodRec := prodRecPoly.toSKI
 lemma prodRec_def (xf xp : SKI) : (prodRec ⬝ xf ⬝ xp) ↠ xf ⬝ (Fst ⬝ xp) ⬝ (Snd ⬝ xp) :=
   prodRecPoly.toSKI_correct [xf, xp] (by simp)
@@ -326,6 +334,7 @@ lemma Nat.recPairStep_correct {α' : Type*} (a : α') (f : Nat → α' → α') 
   | succ n ih =>
     rw [Function.iterate_succ', Function.comp_apply, ih, recPairStep]
 
+/-- We encode primitive recursion on `Nat` by the usual Kleene dentist trick. -/
 def natRecAuxPoly : SKI.Polynomial 2 :=
   SKI.MkPair ⬝' (&0 ⬝' (Snd ⬝' &1) ⬝' (Fst ⬝' &1)) ⬝' (SKI.Succ ⬝' (Snd ⬝' &1))
 def natRecAux := natRecAuxPoly.toSKI
@@ -359,6 +368,7 @@ lemma natRec_def (xa xf xn : SKI) :
     (natRec ⬝ xa ⬝ xf ⬝ xn) ↠ Fst ⬝ (R ⬝ (natRecAux ⬝ xf) ⬝ xn ⬝ (MkPair ⬝ xa ⬝ SKI.Zero)) :=
   natRecPoly.toSKI_correct [xa, xf, xn] (by simp)
 
+/-- Primitive recursion on `Nat`. -/
 theorem isEncoded_nat_rec :
     natRec ⊩ (Nat.rec : α → (Nat → α → α) → Nat → α) := by
   intro a xa ha f xf hf n xn hn
