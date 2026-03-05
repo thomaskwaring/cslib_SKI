@@ -209,7 +209,7 @@ lemma sk_nequiv : ¬ MJoin Red S K := by
   cases (redexFree_iff_mred_eq.1 hK _).1 hkz
 
 /-- Injectivity for booleans. -/
-theorem isBool_injective (x y : SKI) (u v : Bool) (hx : IsBool u x) (hy : IsBool v y)
+theorem isBool_injective {u v : Bool} {x y : SKI} (hx : IsBool u x) (hy : IsBool v y)
     (hxy : MJoin Red x y) : u = v := by
   have h : MJoin Red (if u then S else K) (if v then S else K) := by
     apply mJoin_red_equivalence.trans (y := x ⬝ S ⬝ K)
@@ -223,42 +223,42 @@ theorem isBool_injective (x y : SKI) (u v : Bool) (hx : IsBool u x) (hy : IsBool
   grind [sk_nequiv, mJoin_red_equivalence.symm h]
 
 lemma TF_nequiv : ¬ MJoin Red TT FF := fun h =>
-  (Bool.eq_not_self true).mp <| isBool_injective TT FF true false TT_correct FF_correct h
+  (Bool.eq_not_self true).mp <| isBool_injective TT_correct FF_correct h
 
-/-- A specialisation of `Church : Nat → SKI`. -/
-def churchK : Nat → SKI
-  | 0 => K
-  | n+1 => K ⬝ (churchK n)
+-- /-- A specialisation of `Church : Nat → SKI`. -/
+-- def churchK : Nat → SKI
+--   | 0 => K
+--   | n+1 => K ⬝ (churchK n)
 
-lemma churchK_church : (n : Nat) → churchK n = Church n K K
-  | 0 => rfl
-  | n+1 => by simp [churchK, Church, churchK_church n]
+-- lemma churchK_church : (n : Nat) → churchK n = Church n K K
+--   | 0 => rfl
+--   | n+1 => by simp [churchK, Church, churchK_church n]
 
-lemma churchK_redexFree : (n : Nat) → RedexFree (churchK n)
-  | 0 => trivial
-  | n+1 => churchK_redexFree n
+-- lemma churchK_redexFree : (n : Nat) → RedexFree (churchK n)
+--   | 0 => trivial
+--   | n+1 => churchK_redexFree n
 
-@[simp]
-lemma churchK_size : (n : Nat) → (churchK n).size = n+1
-  | 0 => rfl
-  | n + 1 => by rw [churchK, size, size, churchK_size, Nat.add_comm]
+-- @[simp]
+-- lemma churchK_size : (n : Nat) → (churchK n).size = n+1
+--   | 0 => rfl
+--   | n + 1 => by rw [churchK, size, size, churchK_size, Nat.add_comm]
 
-lemma churchK_injective : Function.Injective churchK :=
-  fun n m h => by simpa using congrArg SKI.size h
+-- lemma churchK_injective : Function.Injective churchK :=
+--   fun n m h => by simpa using congrArg SKI.size h
 
-/-- Injectivity for Church numerals -/
-theorem isChurch_injective (x y : SKI) (n m : Nat) (hx : IsChurch n x) (hy : IsChurch m y)
-    (hxy : MJoin Red x y) : n = m := by
-  suffices MJoin Red (churchK n) (churchK m) by
-    apply churchK_injective
-    exact eq_of_mJoin_red_redexFree this (churchK_redexFree n) (churchK_redexFree m)
-  apply mJoin_red_equivalence.trans (y := x ⬝ K ⬝ K)
-  · simp_rw [churchK_church]
-    exact mJoin_red_equivalence.symm <| Relation.MJoin.single (hx K K)
-  · apply mJoin_red_equivalence.trans (y := y ⬝ K ⬝ K)
-    · apply mJoin_red_head; apply mJoin_red_head; assumption
-    · simp_rw [churchK_church]
-      exact Relation.MJoin.single (hy K K)
+-- /-- Injectivity for Church numerals -/
+-- theorem isChurch_injective {n m : ℕ} {x y : SKI} (hx : IsChurch n x) (hy : IsChurch m y)
+--     (hxy : MJoin Red x y) : n = m := by
+--   suffices MJoin Red (churchK n) (churchK m) by
+--     apply churchK_injective
+--     exact eq_of_mJoin_red_redexFree this (churchK_redexFree n) (churchK_redexFree m)
+--   apply mJoin_red_equivalence.trans (y := x ⬝ K ⬝ K)
+--   · simp_rw [churchK_church]
+--     exact mJoin_red_equivalence.symm <| Relation.MJoin.single (hx K K)
+--   · apply mJoin_red_equivalence.trans (y := y ⬝ K ⬝ K)
+--     · apply mJoin_red_head; apply mJoin_red_head; assumption
+--     · simp_rw [churchK_church]
+--       exact Relation.MJoin.single (hy K K)
 
 /--
 **Rice's theorem**: no SKI term is a non-trivial predicate.

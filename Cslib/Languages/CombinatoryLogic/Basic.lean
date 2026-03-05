@@ -172,6 +172,22 @@ def B : SKI := BPoly.toSKI
 theorem B_def (f g x : SKI) : (B ⬝ f ⬝ g ⬝ x) ↠ f ⬝ (g ⬝ x) :=
   BPoly.toSKI_correct [f, g, x] (by simp)
 
+-- #eval B.size (= 55)
+
+-- A small aside: the bracket abstraction algorithm is effective and ergonomic for *encodability*,
+-- but the resulting encodings are very inefficient --- the above `B` combinator has size 55 but
+-- 4 suffices. This is probably fine, but interestingly to derive `B'` below I followed the same
+-- algorithm, adding only the η-simplification λ x. f x ~ f.
+
+/-- B := λ f g x. f (g x) ~ λ f g. S (K f) g ~ λ f. S (K f) ~ S (K S) K -/
+private def B' : SKI := S ⬝ (K ⬝ S) ⬝ K
+private theorem B'_def (f g x : SKI) : (B' ⬝ f ⬝ g ⬝ x) ↠ f ⬝ (g ⬝ x) := calc
+  (S ⬝ (K ⬝ S) ⬝ K ⬝ f ⬝ g ⬝ x) ↠ (K ⬝ S ⬝ f) ⬝ (K ⬝ f) ⬝ g ⬝ x :=
+    MRed.head x <| MRed.head g <| MRed.S ..
+  _ ⭢ S ⬝ (K ⬝ f) ⬝ g ⬝ x := red_head _ _ x <| red_head _ _ g <| red_head _ _ (K ⬝ f) <| red_K ..
+  _ ⭢ (K ⬝ f ⬝ x) ⬝ (g ⬝ x) := red_S ..
+  _ ⭢ f ⬝ (g ⬝ x) := red_head _ _ (g ⬝ x) <| red_K ..
+
 /-- B followed by tail reduction -/
 lemma B_tail_mred (f g x y : SKI) (h : (g ⬝ x) ↠ y) : (B ⬝ f ⬝ g ⬝ x) ↠ f ⬝ y :=
   Trans.trans (B_def f g x) (MRed.tail f h)
