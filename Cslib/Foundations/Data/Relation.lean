@@ -62,6 +62,10 @@ theorem MJoin.symm : Symmetric (MJoin r) := Relation.symmetric_join
 theorem MJoin.single (h : ReflTransGen r a b) : MJoin r a b := by
   use b
 
+theorem MJoin.to_eqvGen (h : MJoin r a b) : EqvGen r a b := by
+  obtain ⟨z, ha, hb⟩ := h
+  exact (ReflTransGen.to_eqvGen ha).trans a z b (ReflTransGen.to_eqvGen hb).symm
+
 /-- The relation `r` 'up to' the relation `s`. -/
 def UpTo (r s : α → α → Prop) : α → α → Prop := Comp s (Comp r s)
 

@@ -208,6 +208,13 @@ lemma sk_nequiv : ¬ MJoin Red S K := by
   cases (redexFree_iff_mred_eq.1 hS z).1 hsz
   cases (redexFree_iff_mred_eq.1 hK _).1 hkz
 
+lemma sk_nequiv' : ¬ MJoin Red S K := by
+  intro ⟨z, hS, hK⟩
+  obtain (rfl | ⟨_, hSz, -⟩) := Relation.ReflTransGen.cases_head hS
+  · obtain (h | ⟨_, hSz, -⟩) := Relation.ReflTransGen.cases_head hK
+    all_goals grind
+  · cases hSz
+
 /-- Injectivity for booleans. -/
 theorem isBool_injective {u v : Bool} {x y : SKI} (hx : IsBool u x) (hy : IsBool v y)
     (hxy : MJoin Red x y) : u = v := by

@@ -355,44 +355,44 @@ theorem or_correct (a b : SKI) (ua ub : Bool) (ha : IsBool ua a) (hb : IsBool ub
 
 /-! ### Pairs -/
 
-/-- MkPair := λ a b. ⟨a,b⟩ -/
-def MkPair : SKI := SKI.Cond
-/-- First projection -/
-def Fst : SKI := R ⬝ TT
-/-- Second projection -/
-def Snd : SKI := R ⬝ FF
+-- /-- MkPair := λ a b. ⟨a,b⟩ -/
+-- def MkPair : SKI := SKI.Cond
+-- /-- First projection -/
+-- def Fst : SKI := R ⬝ TT
+-- /-- Second projection -/
+-- def Snd : SKI := R ⬝ FF
 
-@[scoped grind .]
-theorem fst_correct (a b : SKI) : (Fst ⬝ (MkPair ⬝ a ⬝ b)) ↠ a := by calc
-  _ ↠ SKI.Cond ⬝ a ⬝ b ⬝ TT := R_def _ _
-  _ ↠ a := cond_correct TT a b true TT_correct
+-- @[scoped grind .]
+-- theorem fst_correct (a b : SKI) : (Fst ⬝ (MkPair ⬝ a ⬝ b)) ↠ a := by calc
+--   _ ↠ SKI.Cond ⬝ a ⬝ b ⬝ TT := R_def _ _
+--   _ ↠ a := cond_correct TT a b true TT_correct
 
-@[scoped grind .]
-theorem snd_correct (a b : SKI) : (Snd ⬝ (MkPair ⬝ a ⬝ b)) ↠ b := by calc
-  _ ↠ SKI.Cond ⬝ a ⬝ b ⬝ FF := R_def _ _
-  _ ↠ b := cond_correct FF a b false FF_correct
+-- @[scoped grind .]
+-- theorem snd_correct (a b : SKI) : (Snd ⬝ (MkPair ⬝ a ⬝ b)) ↠ b := by calc
+--   _ ↠ SKI.Cond ⬝ a ⬝ b ⬝ FF := R_def _ _
+--   _ ↠ b := cond_correct FF a b false FF_correct
 
-/-- Unpaired f ⟨x, y⟩ := f x y, cf `Nat.unparied`. -/
-def UnpairedPoly : SKI.Polynomial 2 := &0 ⬝' (Fst ⬝' &1) ⬝' (Snd ⬝' &1)
-/-- A term representing Unpaired -/
-protected def Unpaired : SKI := UnpairedPoly.toSKI
-theorem unpaired_def (f p : SKI) : (SKI.Unpaired ⬝ f ⬝ p) ↠ f ⬝ (Fst ⬝ p) ⬝ (Snd ⬝ p) :=
-  UnpairedPoly.toSKI_correct [f, p] (by simp)
+-- /-- Unpaired f ⟨x, y⟩ := f x y, cf `Nat.unparied`. -/
+-- def UnpairedPoly : SKI.Polynomial 2 := &0 ⬝' (Fst ⬝' &1) ⬝' (Snd ⬝' &1)
+-- /-- A term representing Unpaired -/
+-- protected def Unpaired : SKI := UnpairedPoly.toSKI
+-- theorem unpaired_def (f p : SKI) : (SKI.Unpaired ⬝ f ⬝ p) ↠ f ⬝ (Fst ⬝ p) ⬝ (Snd ⬝ p) :=
+--   UnpairedPoly.toSKI_correct [f, p] (by simp)
 
-theorem unpaired_correct (f x y : SKI) : (SKI.Unpaired ⬝ f ⬝ (MkPair ⬝ x ⬝ y)) ↠ f ⬝ x ⬝ y := by
-  trans f ⬝ (Fst ⬝ (MkPair ⬝ x ⬝ y)) ⬝ (Snd ⬝ (MkPair ⬝ x ⬝ y))
-  · exact unpaired_def f _
-  · apply parallel_mRed
-    · apply MRed.tail
-      exact fst_correct _ _
-    · exact snd_correct _ _
+-- theorem unpaired_correct (f x y : SKI) : (SKI.Unpaired ⬝ f ⬝ (MkPair ⬝ x ⬝ y)) ↠ f ⬝ x ⬝ y := by
+--   trans f ⬝ (Fst ⬝ (MkPair ⬝ x ⬝ y)) ⬝ (Snd ⬝ (MkPair ⬝ x ⬝ y))
+--   · exact unpaired_def f _
+--   · apply parallel_mRed
+--     · apply MRed.tail
+--       exact fst_correct _ _
+--     · exact snd_correct _ _
 
-/-- Pair f g x := ⟨f x, g x⟩, cf `Primrec.Pair`. -/
-def PairPoly : SKI.Polynomial 3 := MkPair ⬝' (&0 ⬝' &2) ⬝' (&1 ⬝' &2)
-/-- A SKI term representing Pair -/
-protected def Pair : SKI := PairPoly.toSKI
-theorem pair_def (f g x : SKI) : (SKI.Pair ⬝ f ⬝ g ⬝ x) ↠ MkPair ⬝ (f ⬝ x) ⬝ (g ⬝ x) :=
-  PairPoly.toSKI_correct [f, g, x] (by simp)
+-- /-- Pair f g x := ⟨f x, g x⟩, cf `Primrec.Pair`. -/
+-- def PairPoly : SKI.Polynomial 3 := MkPair ⬝' (&0 ⬝' &2) ⬝' (&1 ⬝' &2)
+-- /-- A SKI term representing Pair -/
+-- protected def Pair : SKI := PairPoly.toSKI
+-- theorem pair_def (f g x : SKI) : (SKI.Pair ⬝ f ⬝ g ⬝ x) ↠ MkPair ⬝ (f ⬝ x) ⬝ (g ⬝ x) :=
+--   PairPoly.toSKI_correct [f, g, x] (by simp)
 
 end SKI
 
