@@ -520,6 +520,9 @@ def Theory.WeakerThan (T T' : Theory Atom) : Prop :=
 instance instLETheory : LE (Theory Atom) where
   le := Theory.WeakerThan
 
+lemma le_of_subset {T T' : Theory Atom} (h : T ⊆ T') : T ≤ T' :=
+  fun _ hA => ⟨ax <| h hA⟩
+
 /-- Replace appeals to axioms in `T` by `T'`-derivations. -/
 noncomputable def Theory.Derivation.mapLE {T T' : Theory Atom} {S : Sequent Atom} (h : T ≤ T') :
     T.Derivation S → T'.Derivation S
@@ -566,5 +569,48 @@ to the domain language `Atom`. -/
 def IsConservative {Atom Atom' : Type u} [DecidableEq Atom] [DecidableEq Atom'] (T : Theory Atom)
     (T' : Theory Atom') : Extension T T' → Prop
   | ⟨f, _⟩ => ∀ (A : Proposition Atom), ⊢[T'] (A.map f) → ⊢[T] A
+
+theorem isBot_mpl : IsBot (MPL (Atom := Atom)) := fun T => le_of_subset T.empty_subset
+
+theorem ipl_le_cpl [Bot Atom] : IPL (Atom := Atom) ≤ CPL := by
+  rintro _ ⟨A, rfl⟩
+  constructor
+  apply implI
+  apply implE (A := ¬¬A) (ax <| by grind)
+  exact implI _ <| ass <| by grind
+
+def lem [Bot Atom] [IsClassical T] (A : Proposition Atom) : T.Derivation ⟨∅, A ∨ ¬ A⟩ := by
+  apply implE (A := ¬¬(A ∨ ¬A)) (ax <| by grind)
+  apply implI
+  apply implE (A := A ∨ ¬A) (ass <| by grind)
+  apply disjI₂
+  apply implI
+  refine implE (A := A) ?_ (ass <| by grind)
+  apply implI
+  apply implE (A := A ∨ ¬A) (ass <| by grind)
+  apply disjI₁
+  exact ass <| by grind
+
+def pierce [Bot Atom] [IsClassical T] (A B : Proposition Atom) :
+    T.Derivation ⟨∅, ((A → B) → A) → A⟩ := by
+  apply implI
+  apply disjE (lem A |>.weak_ctx (by grind)) (ass <| by grind)
+  apply implE (A := A → B) (ass <| by grind)
+  apply implI
+  apply implE (A := ¬¬B) (ax <| by grind)
+  apply implI
+  apply implE (A := A) <;> exact ass (by grind)
+
+noncomputable def efq' [Bot Atom] (h : IPL ≤ T) (A : Proposition Atom) : T.Derivation ⟨∅, ⊥ → A⟩ :=
+  h (⊥ → A) (IsIntuitionistic.efq A) |>.some
+
+noncomputable def dne' [Bot Atom] (h : CPL ≤ T) (A : Proposition Atom) :
+    T.Derivation ⟨∅, ¬¬A → A⟩ := h (¬¬A → A) (IsClassical.dne A) |>.some
+
+noncomputable def lem' [Bot Atom] (h : CPL ≤ T) (A : Proposition Atom) :
+    T.Derivation ⟨∅, A ∨ ¬ A⟩ := (lem A (T := CPL)).mapLE h
+
+noncomputable def pierce' [Bot Atom] (h : CPL ≤ T) (A B : Proposition Atom) :
+    T.Derivation ⟨∅, ((A → B) → A) → A⟩ := (pierce A B (T := CPL)).mapLE h
 
 end Cslib.Logic.PL
