@@ -288,14 +288,17 @@ def Theory.Derivation.map {Atom Atom' : Type u} [DecidableEq Atom] [DecidableEq 
   | implI _ D => implI _ <| (Finset.image_insert (Proposition.map f) _ _) ▸ (D.map f)
   | implE D E => implE (D.map f) (E.map f)
 
-theorem Theory.Derivable.image {Atom' : Type u} [DecidableEq Atom'] {T : Theory Atom}
+theorem Theory.SDerivable.map {Atom' : Type u} [DecidableEq Atom'] {T : Theory Atom}
     (f : Atom → Atom') {Γ : Ctx Atom} {B : Proposition Atom} :
     Γ ⊢[T] B → (Γ.map f) ⊢[T.map f] (B.map f) := by
   intro ⟨D⟩
   exact ⟨D.map f⟩
 
+/-- Move the axioms used in a derivation `D` to the context, obtaining a derivation in minimal
+logic. -/
 def Theory.Derivation.collectAxs {Γ : Ctx Atom} {B : Proposition Atom} :
-    T.Derivation ⟨Γ, B⟩ → Σ Δ : {Δ : Ctx Atom // T ⊇ ↑Δ}, MPL.Derivation ⟨Γ ∪ Δ, B⟩
+    T.Derivation ⟨Γ, B⟩ →
+      Σ Δ : {Δ : Ctx Atom // (Δ : Theory Atom) ⊆ T}, MPL.Derivation ⟨Γ ∪ Δ, B⟩
   | @ax _ _ _ _ B _ => ⟨⟨{B}, by grind⟩, ass <| by grind⟩
   | ass _ => ⟨⟨∅, by grind⟩, ass <| by grind⟩
   | conjI D E =>
@@ -319,10 +322,11 @@ def Theory.Derivation.collectAxs {Γ : Ctx Atom} {B : Proposition Atom} :
     let ⟨Δ₂, E'⟩ := collectAxs E
     ⟨⟨Δ₁ ∪ Δ₂, by grind⟩, implE (D'.weak_ctx <| by grind) (E'.weak_ctx <| by grind)⟩
 
-theorem Theory.Derivable.collect_axs {Γ : Ctx Atom} {B : Proposition Atom} :
-    Γ ⊢[T] B → ∃ Δ : Ctx Atom, (Γ ∪ Δ) ⊢[MPL] B ∧ T ⊇ Δ
+theorem Theory.SDerivable.collect_axs {Γ : Ctx Atom} {B : Proposition Atom} :
+    (Γ ⊢[T] B) → ∃ Δ : Ctx Atom, ((Γ ∪ Δ) ⊢[MPL] B) ∧ ((Δ : Theory Atom) ⊆ T)
   | ⟨D⟩ => let ⟨Δ, D'⟩ := Theory.Derivation.collectAxs D; ⟨Δ, ⟨⟨D'⟩, by grind⟩⟩
 
+/-- Move some axioms from the theory to the context. -/
 def Theory.Derivation.axsToAss {T : Theory Atom} {Γ Δ : Ctx Atom} {B : Proposition Atom} :
     (T ∪ Δ).Derivation ⟨Γ, B⟩ → T.Derivation ⟨Γ ∪ Δ, B⟩
   | @ax _ _ _ _ B _ => by
@@ -353,6 +357,7 @@ theorem Theory.SDerivable.axs_to_ass {T : Theory Atom} {Γ Δ : Ctx Atom} {B : P
     Γ ⊢[T ∪ Δ] B → (Γ ∪ Δ) ⊢[T] B
   | ⟨D⟩ => ⟨Theory.Derivation.axsToAss D⟩
 
+/-- Remove some assumptions by moving them to the theory. -/
 def Theory.Derivation.assToAxs' {T : Theory Atom} {Γ Δ : Ctx Atom} {B : Proposition Atom} :
     T.Derivation ⟨Γ, B⟩ → (T ∪ Δ).Derivation ⟨Γ \ Δ, B⟩
   | @ass _ _ _ _ B _ => by
@@ -375,6 +380,7 @@ def Theory.Derivation.assToAxs' {T : Theory Atom} {Γ Δ : Ctx Atom} {B : Propos
     implI _ ((assToAxs' (Δ := Δ) (B := B) D).weak_ctx <| by grind)
   | implE D E => implE (assToAxs' D) (assToAxs' E)
 
+/-- Remove dependence on some assumptions by adding them to the theory. -/
 def Theory.Derivation.assToAxs {T : Theory Atom} {Γ Δ : Ctx Atom} {B : Proposition Atom}
     (D : T.Derivation ⟨Γ ∪ Δ, B⟩) : (T ∪ Δ).Derivation ⟨Γ, B⟩ := (assToAxs' D).weak_ctx <| by grind
 
@@ -388,6 +394,7 @@ theorem Theory.SDerivable.iff_sDerivable_extension {Γ Δ : Ctx Atom} {B : Propo
 
 /-! ### Properties of equivalence -/
 
+/-- A derivation of the canonical tautology. -/
 def Theory.derivationTop [Inhabited Atom] : T.Derivation ⟨∅, ⊤⟩ :=
   implI ∅ <| ass <| by grind
 
@@ -443,13 +450,16 @@ theorem Theory.equiv_iff_equiv_hypothesis {A B : Proposition Atom} :
     · exact (h ∅ B).mpr ⟨ass <| by grind⟩
     · exact (h ∅ A).mp ⟨ass <| by grind⟩
 
+/-- A proposition is equivalent to itself. -/
 def reflEquiv (A : Proposition Atom) : T.equiv A A :=
   let D : Derivation ⟨{A},A⟩ := ass <| by grind;
   ⟨D,D⟩
 
+/-- Equivalence is symmetric. -/
 def commEquiv {A B : Proposition Atom} (e : T.equiv A B) : T.equiv B A :=
   ⟨e.2, e.1⟩
 
+/-- Equivalence is transitive. -/
 def transEquiv {A B C : Proposition Atom} (eAB : T.equiv A B)
     (eBC : T.equiv B C) : T.equiv A C :=
   ⟨mapEquivConclusion _ eBC eAB.1, mapEquivConclusion _ (commEquiv eAB) eBC.2⟩
@@ -470,6 +480,7 @@ theorem equivalent_trans {T : Theory Atom} {A B C : Proposition Atom} :
 theorem Theory.equiv_equivalence (T : Theory Atom) : Equivalence (T.Equiv (Atom := Atom)) :=
   ⟨equivalent_refl, equivalent_comm, equivalent_trans⟩
 
+/-- The setoid of propositions under equivalence. -/
 protected def Theory.propositionSetoid (T : Theory Atom) : Setoid (Proposition Atom) :=
   ⟨T.Equiv, T.equiv_equivalence⟩
 
@@ -494,7 +505,7 @@ theorem inconsistent_iff [Bot Atom] [IsIntuitionistic T] : Inconsistent T ↔ �
   · intro ⟨D⟩ A
     exact ⟨Theory.Derivation.implE (A := ⊥) (Theory.Derivation.ax <| by grind) D⟩
 
-/-! The **compactness theorem*: a model is inconsistent iff it has a finite inconsistent
+/-! The **compactness theorem*: a theory is inconsistent iff it has a finite inconsistent
 subtheory. -/
 theorem compactness [Bot Atom] [IsIntuitionistic T] :
     Inconsistent T ↔
@@ -538,7 +549,7 @@ noncomputable def Theory.Derivation.mapLE {T T' : Theory Atom} {S : Sequent Atom
   | implE D E => implE (D.mapLE h) (E.mapLE h)
 
 /-- Proof irrelevant substitution of `T`-axioms. -/
-theorem Theory.Derivable.map_LE {T T' : Theory Atom} {S : Sequent Atom} (h : T ≤ T') :
+theorem Theory.SDerivable.map_LE {T T' : Theory Atom} {S : Sequent Atom} (h : T ≤ T') :
     T.SDerivable S → T'.SDerivable S
   | ⟨D⟩ => ⟨D.mapLE h⟩
 
@@ -548,14 +559,14 @@ theorem Theory.LE_iff_map {T T' : Theory Atom} :
     T ≤ T' ↔ ∀ S : Sequent Atom, T.SDerivable S → T'.SDerivable S := by
   constructor
   · intro h _
-    exact Theory.Derivable.map_LE h
+    exact Theory.SDerivable.map_LE h
   · intro h A hA
     exact h ⟨∅, A⟩ ⟨ax hA⟩
 
 instance instPreorderTheory : Preorder (Theory Atom) where
   lt T T' := T.WeakerThan T' ∧ ¬ T'.WeakerThan T
   le_refl _ _ h := ⟨ax h⟩
-  le_trans _ _ _ h h' A hA := Theory.Derivable.map_LE h' (h A hA)
+  le_trans _ _ _ h h' A hA := Theory.SDerivable.map_LE h' (h A hA)
 
 /-- An extension `T'` of a theory `T` generalises `Theory.WeakerThan` to allow a change of the
 atomic language. -/
@@ -579,6 +590,7 @@ theorem ipl_le_cpl [Bot Atom] : IPL (Atom := Atom) ≤ CPL := by
   apply implE (A := ¬¬A) (ax <| by grind)
   exact implI _ <| ass <| by grind
 
+/-- A derivation of the law of excluded middle in a classical theory. -/
 def lem [Bot Atom] [IsClassical T] (A : Proposition Atom) : T.Derivation ⟨∅, A ∨ ¬ A⟩ := by
   apply implE (A := ¬¬(A ∨ ¬A)) (ax <| by grind)
   apply implI
@@ -591,6 +603,7 @@ def lem [Bot Atom] [IsClassical T] (A : Proposition Atom) : T.Derivation ⟨∅,
   apply disjI₁
   exact ass <| by grind
 
+/-- A derivation of Pierce's law in a classical theory. -/
 def pierce [Bot Atom] [IsClassical T] (A B : Proposition Atom) :
     T.Derivation ⟨∅, ((A → B) → A) → A⟩ := by
   apply implI
@@ -601,16 +614,70 @@ def pierce [Bot Atom] [IsClassical T] (A B : Proposition Atom) :
   apply implI
   apply implE (A := A) <;> exact ass (by grind)
 
+/-- A derivation of ex falso quodlibet in a theory stronger than `IPL`. -/
 noncomputable def efq' [Bot Atom] (h : IPL ≤ T) (A : Proposition Atom) : T.Derivation ⟨∅, ⊥ → A⟩ :=
   h (⊥ → A) (IsIntuitionistic.efq A) |>.some
 
+/-- A derivation of double-negation elimination in a theory stronger than `CPL`. -/
 noncomputable def dne' [Bot Atom] (h : CPL ≤ T) (A : Proposition Atom) :
     T.Derivation ⟨∅, ¬¬A → A⟩ := h (¬¬A → A) (IsClassical.dne A) |>.some
 
+/-- A derivation of the law of excluded middle in a theory stronger than `CPL`. -/
 noncomputable def lem' [Bot Atom] (h : CPL ≤ T) (A : Proposition Atom) :
     T.Derivation ⟨∅, A ∨ ¬ A⟩ := (lem A (T := CPL)).mapLE h
 
+/-- A derivation of Pierce's law in a theory stronger than `CPL`. -/
 noncomputable def pierce' [Bot Atom] (h : CPL ≤ T) (A B : Proposition Atom) :
     T.Derivation ⟨∅, ((A → B) → A) → A⟩ := (pierce A B (T := CPL)).mapLE h
+
+/-- A theory is saturated if every provable proposition is in fact an axiom. -/
+def Theory.Saturated (T : Theory Atom) : Prop :=
+  ∀ (A : Proposition Atom), ⊢[T] A → A ∈ T
+
+/-- The saturation of a theory is the collection of all provable propositions. -/
+def Theory.saturate (T : Theory Atom) : Theory Atom := {A : Proposition Atom | ⊢[T] A}
+
+theorem Theory.saturate_def (T : Theory Atom) (A : Proposition Atom) :
+  A ∈ T.saturate ↔ ⊢[T] A := Iff.rfl
+
+theorem Theory.weaker_than_saturation (T : Theory Atom) : T ≤ T.saturate :=
+  fun _ hA => ⟨ax ⟨ax hA⟩⟩
+
+theorem Theory.saturation_weaker_than (T : Theory Atom) : T.saturate ≤ T :=
+  fun _ hA => hA
+
+/-- Saturating a theory does not affect derivability. -/
+theorem Theory.SDerivable.iff_sDerivable_saturation {T : Theory Atom} {Γ : Ctx Atom}
+    {A : Proposition Atom} : Γ ⊢[T.saturate] A ↔ Γ ⊢[T] A :=
+  ⟨fun h => h.map_LE T.saturation_weaker_than, fun h => h.map_LE T.weaker_than_saturation⟩
+
+/-- The `WeakerThan` relation corresponds exactly to inclusion between saturations. -/
+theorem Theory.weakerThan_iff {T T' : Theory Atom} : T ≤ T' ↔ T.saturate ⊆ T'.saturate := by
+  constructor <;> intro h
+  · intro A
+    rw [T.saturate_def, T'.saturate_def]
+    exact Theory.SDerivable.map_LE h
+  · intro A hA
+    have : _ := h <| (T.saturate_def A).mpr ⟨ax hA⟩
+    rwa [←T'.saturate_def]
+
+/-- The saturation of a theory deserves its name. -/
+theorem Theory.saturation_saturated (T : Theory Atom) : T.saturate.Saturated := by
+  intro B hB
+  rw [Theory.saturate_def]
+  exact SDerivable.iff_sDerivable_saturation.mp hB
+
+theorem Theory.saturated_iff (T : Theory Atom) : T.Saturated ↔ T = T.saturate := by
+  constructor <;> intro h
+  · ext A
+    rw [T.saturate_def]
+    constructor
+    · exact fun hA => ⟨ax hA⟩
+    · exact h A
+  · rw [h]
+    exact T.saturation_saturated
+
+theorem Theory.saturate_idem (T : Theory Atom) : T.saturate.saturate = T.saturate := by
+  nth_rw 2 [T.saturate.saturated_iff.mp T.saturation_saturated]
 
 end Cslib.Logic.PL
