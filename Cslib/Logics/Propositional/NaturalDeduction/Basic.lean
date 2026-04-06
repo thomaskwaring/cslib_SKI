@@ -30,6 +30,9 @@ it has a derivation.
 - The unconditional versions `Derivable`, `SDerivable` and `Equiv` are abbreviations for the
 relevant concept relative to the empty theory `MPL`.
 - `Theory.WeakerThan` : a theory `T` is weaker than `T'` if every axiom in `T` is `T'`-derivable.
+- `Theory.Saturated` : a theory `T` is saturated if every derivable proposition is an axiom. The
+theory you get by collecting all `T`-derivable propositions (`T.saturation`) is saturated, and
+derives the same sequents as `T` (`Theory.SDerivable.iff_sDerivable_saturation`).
 
 ## Main results
 
@@ -64,6 +67,7 @@ variable {Atom : Type u} [DecidableEq Atom] {T : Theory Atom}
 /-- Contexts are finsets of propositions. -/
 abbrev Ctx (Atom) := Finset (Proposition Atom)
 
+/-- Map a context along a map of atoms. -/
 def Ctx.map {Atom Atom' : Type u} [DecidableEq Atom] [DecidableEq Atom'] (f : Atom → Atom') :
     Ctx Atom → Ctx Atom' := Finset.image (Proposition.map f)
 
