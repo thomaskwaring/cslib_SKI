@@ -8,6 +8,7 @@ module
 public import Cslib.Logics.Propositional.NaturalDeduction.Basic
 public import Cslib.Foundations.Logic.LogicalEquivalence
 public import Mathlib.Data.Fintype.EquivFin
+public import Mathlib.Order.Antisymmetrization
 
 @[expose] public section
 
@@ -168,12 +169,12 @@ def WeakerThan (T T' : Theory Atom) : Prop :=
 instance instLETheory : LE (Theory Atom) where
   le := WeakerThan
 
-lemma Embedding.to_le {T T' : Theory Atom} (emb : T.Embedding T') : T ≤ T' :=
+lemma Embedding.le {T T' : Theory Atom} (emb : T.Embedding T') : T ≤ T' :=
   fun A hA => ⟨emb A hA⟩
 
 lemma nonempty_embedding_iff_le {T T' : Theory Atom} :
     Nonempty (T.Embedding T') ↔  T ≤ T' where
-  mp h := Embedding.to_le h.some
+  mp h := Embedding.le h.some
   mpr h := ⟨fun A hA => h A hA |>.some⟩
 
 /-- Embedding induced by an inclusion. -/
@@ -222,23 +223,10 @@ instance instPreorderTheory : Preorder (Theory Atom) where
   le_refl _ _ h := ⟨ax h⟩
   le_trans _ _ _ h h' A hA := Derivable.of_le h' (h A hA)
 
-/-- An extension `T'` of a theory `T` generalises `Theory.WeakerThan` to allow a change of the
-atomic language. -/
-structure Extension {Atom Atom' : Type u} [DecidableEq Atom] [DecidableEq Atom'] (T : Theory Atom)
-    (T' : Theory Atom') where
-  f : Atom → Proposition Atom'
-  h : (T.subst f).Embedding T'
-
-/-- An extension of theories is conservative if it doesn't add any new theorems, when restricted
-to the domain language `Atom`. -/
-def IsConservative {Atom Atom' : Type u} [DecidableEq Atom] [DecidableEq Atom'] (T : Theory Atom)
-    (T' : Theory Atom') : Extension T T' → Prop
-  | ⟨f, _⟩ => ∀ (A : Proposition Atom), Derivable (⊢[T'] (A >>= f)) → Derivable (⊢[T] A)
-
 /-- Minimal logic embeds into every theory. -/
 def Theory.Embedding.mpl (T : Theory Atom) : MPL.Embedding T := .ofSubset T.empty_subset
 
-theorem isBot_mpl : IsBot (MPL (Atom := Atom)) := fun T => (Embedding.mpl T).to_le
+theorem isBot_mpl : IsBot (MPL (Atom := Atom)) := fun T => (Embedding.mpl T).le
 
 theorem isTop_of_inconsistent (h : T.Inconsistent) : IsTop T :=
   fun _ A _ => h A
@@ -254,9 +242,24 @@ theorem ipl_le_cpl [Bot Atom] : IPL (Atom := Atom) ≤ CPL := by
 def Theory.efq [Bot Atom] [IsIntuitionistic T] (A : Proposition Atom) : ⇓(⊢[T] ⊥ → A) :=
   ax <| by grind
 
+def Theory.efqHyp [Bot Atom] [IsIntuitionistic T] {Γ : Ctx Atom} (h : ⊥ ∈ Γ)
+    (A : Proposition Atom) : ⇓(Γ ⊢[T] A) :=
+  implE ((T.efq A).weak_ctx <| Finset.empty_subset Γ) (ass h)
+
 /-- `T` derives efq if `IPL` embeds into `T`. -/
 def Theory.Embedding.efqOfIPL [Bot Atom] (emb : IPL.Embedding T) (A : Proposition Atom) :
     ⇓(⊢[T] ⊥ → A) := (IPL.efq A).mapEmbedding emb
+
+def Theory.efqOfIPLHyp [Bot Atom] (emb : IPL.Embedding T) {Γ : Ctx Atom} (h : ⊥ ∈ Γ)
+    (A : Proposition Atom) : ⇓(Γ ⊢[T] A) :=
+  (IPL.efqHyp h A).mapEmbedding emb
+
+def Theory.absurd [Bot Atom] [IsIntuitionistic T] {Γ : Ctx Atom} (A B : Proposition Atom)
+    (hA : A ∈ Γ) (hA' : (¬ A) ∈ Γ) : ⇓(Γ ⊢[T] B) :=
+  implE (A := ⊥) (ax <| by grind) (implE (A := A) (ass <| by grind) (ass <| by grind))
+
+def Theory.absurdOfIPL [Bot Atom] (emb : IPL.Embedding T) {Γ : Ctx Atom} (A B : Proposition Atom)
+    (hA : A ∈ Γ) (hA' : (¬ A) ∈ Γ) : ⇓(Γ ⊢[T] B) := (IPL.absurd A B hA hA').mapEmbedding emb
 
 /-- A derivation of double-negation elimination in a classical theory. -/
 def Theory.dne [Bot Atom] [IsClassical T] (A : Proposition Atom) : ⇓(⊢[T] ¬¬A → A) :=
@@ -344,6 +347,47 @@ theorem Theory.saturated_iff (T : Theory Atom) : T.Saturated ↔ T = T.saturate 
 
 theorem Theory.saturate_idem (T : Theory Atom) : T.saturate.saturate = T.saturate :=
   T.saturate.saturated_iff.mp T.saturate_saturated |>.symm
+
+/-! ### Equivalent axiomatizations of classical logic -/
+
+namespace Theory
+
+instance : Setoid (Theory Atom) := AntisymmRel.setoid (Theory Atom) (· ≤ ·)
+
+def LEM [Bot Atom] : Theory Atom := {A ∨ ¬ A | A : Proposition Atom}
+
+def Pierce : Theory Atom := {((A → B) → A) → A | (A : Proposition Atom) (B : Proposition Atom)}
+
+theorem ipl_lem_equiv_cpl [Bot Atom] : (IPL (Atom := Atom)) ∪ LEM ≈ CPL where
+  left := by
+    rintro _ (h | ⟨A, rfl⟩)
+    · exact ipl_le_cpl _ h
+    · exact ⟨CPL.lem A⟩
+  right := by
+    rintro _ ⟨A, rfl⟩
+    constructor
+    apply implI
+    apply disjE (A := A) (B := ¬ A)
+      (ax <| by apply Set.mem_union_right; exact ⟨A, rfl⟩) (ass <| by grind)
+    apply Theory.absurdOfIPL (A := ¬ A) (Embedding.ofSubset Set.subset_union_left)
+      <;> grind
+
+theorem ipl_pierce_equiv_cpl [Bot Atom] : (IPL (Atom := Atom)) ∪ Pierce ≈ CPL where
+  left := by
+    rintro _ (h | ⟨A, B, rfl⟩)
+    · exact ipl_le_cpl _ h
+    · exact ⟨CPL.pierce A B⟩
+  right := by
+    rintro _ ⟨A, rfl⟩
+    constructor
+    apply implI
+    simp only
+    apply implE (A := ¬ A → A) (ax <| by apply Set.mem_union_right; exact ⟨A, ⊥, rfl⟩)
+    apply implI
+    apply Theory.absurdOfIPL (A := ¬ A) (Embedding.ofSubset Set.subset_union_left)
+      <;> grind
+
+end Theory
 
 /-! ### Mapping along propositional constructors -/
 
@@ -493,4 +537,70 @@ instance : LogicalEquivalence (Proposition Atom) (Ctx Atom × Proposition Atom) 
     | conc => exact equiv_iff_equiv_derivable.mp h _ |>.mp hA
     | hyp => exact equiv_iff_equiv_derivable_hypothesis.mp h _ _ |>.mp hA
 
-end Cslib.Logic.PL
+/-! ### Monad lemmas -/
+instance : LawfulMonad Proposition := by
+  apply LawfulMonad.mk'
+  · intro _ A
+    induction A <;> simp_all [Functor.map, subst]
+  · simp [bind, subst]
+  · intro _ _ _ A
+    induction A <;> simp_all [bind, subst]
+  all_goals
+    intro _ _ _ _
+    rfl
+
+/-! ### Extensions of theories -/
+
+namespace Theory
+
+variable {Atom Atom' Atom'' : Type u} [DecidableEq Atom] [DecidableEq Atom'] [DecidableEq Atom'']
+
+/-- An extension `T'` of a theory `T` generalises `Theory.Embedding` to allow a change of the
+atomic language. -/
+structure Extension (T : Theory Atom) (T' : Theory Atom') where
+  f : Atom → Proposition Atom'
+  emb : (T.subst f).Embedding T'
+
+def Embedding.toExtension (T T' : Theory Atom) (e : T.Embedding T') : T.Extension T' where
+  f := pure
+  emb := show T = T.subst pure by simp [Theory.subst] ▸ e
+
+namespace Extension
+
+variable {T : Theory Atom} {T' : Theory Atom'} {T'' : Theory Atom''}
+
+/-- An extension of theories is conservative if it doesn't add any new theorems, when restricted
+to the domain language `Atom`. -/
+def IsConservative [DecidableEq Atom] [DecidableEq Atom'] : Extension T T' → Prop
+  | ⟨f, _⟩ => ∀ (A : Proposition Atom), Derivable (⊢[T'] (A >>= f)) → Derivable (⊢[T] A)
+
+omit [DecidableEq Atom] in
+lemma subst_le (e : T.Extension T') : T.subst e.f ≤ T' := e.emb.le
+
+/-- Map a derivation into the extended theory. -/
+def mapDerivation (e : T.Extension T') {Γ : Ctx Atom} {A : Proposition Atom} (D : ⇓(Γ ⊢[T] A)) :
+    ⇓(Γ.subst e.f ⊢[T'] A >>= e.f) :=
+  (D.substAtom e.f).mapEmbedding e.emb
+
+lemma derivable_subst (e : T.Extension T') {Γ : Ctx Atom} {A : Proposition Atom}
+    (h : Derivable (Γ ⊢[T] A)) : Derivable (Γ.subst e.f ⊢[T'] A >>= e.f) :=
+  ⟨e.mapDerivation h.some⟩
+
+protected def id : T.Extension T where
+  f := pure
+  emb := by
+    simp_rw [Theory.subst, bind_pure, Set.image_id']
+    exact Theory.Embedding.id T
+
+protected noncomputable def comp (e : T.Extension T') (e' : T'.Extension T'') :
+    T.Extension T'' where
+  f x := e.f x >>= e'.f -- this is `f := e.f >=> e'.f` but Bind.kleisliRight has no API :/
+  emb := by
+    refine Theory.Embedding.comp ?_ e'.emb
+    intro A hA
+    obtain ⟨hT, hA'⟩ := Classical.choose_spec hA
+    have D : ⇓(⊢[T'.subst e'.f] (Classical.choose hA >>= e.f) >>= e'.f) :=
+      e.emb (Classical.choose hA >>= e.f) ⟨_, hT, rfl⟩ |>.substAtom e'.f
+    simpa [hA'] using D
+
+end Cslib.Logic.PL.Theory.Extension
