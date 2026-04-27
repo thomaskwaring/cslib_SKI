@@ -297,7 +297,7 @@ def Theory.derivationTop [Inhabited Atom] : T⇓(⊤ : Proposition Atom) :=
 
 theorem derivableIn_top [Inhabited Atom] : DerivableIn T (⊤ : Proposition Atom) := ⟨derivationTop⟩
 
-theorem derivable_iff_equiv_top [Inhabited Atom] (A : Proposition Atom) :
+theorem derivableIn_iff_equiv_top [Inhabited Atom] (A : Proposition Atom) :
     DerivableIn T A ↔ A ≡[T] ⊤ := by
   constructor <;> intro h
   · refine ⟨derivationTop.weak_ctx <| by grind, ?_⟩

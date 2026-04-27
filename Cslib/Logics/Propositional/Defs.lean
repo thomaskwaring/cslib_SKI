@@ -54,7 +54,17 @@ inductive Proposition (Atom : Type u) : Type u where
   | impl (a b : Proposition Atom)
 deriving DecidableEq, BEq
 
+instance instInhabitedOfInhabited [Inhabited Atom] : Inhabited (Proposition Atom) := ⟨.atom default⟩
+
+omit [DecidableEq Atom] in
+@[simp] lemma Proposition.default_eq [Inhabited Atom] :
+  (default : Proposition Atom) = Proposition.atom default := rfl
+
 instance instBotProposition [Bot Atom] : Bot (Proposition Atom) := ⟨.atom ⊥⟩
+
+omit [DecidableEq Atom] in
+@[simp] lemma Proposition.atom_bot [Bot Atom] : (.atom ⊥ : Proposition Atom) = ⊥ := rfl
+
 instance instInhabitedOfBot [Bot Atom] : Inhabited Atom := ⟨⊥⟩
 
 /-- We view negation as a defined connective ~A := A → ⊥ -/
@@ -85,6 +95,18 @@ def Proposition.subst {Atom Atom' : Type u} (f : Atom → Proposition Atom') :
 instance : Monad Proposition where
   pure := .atom
   bind A f := A.subst f
+
+@[simp] lemma bind_atom {Atom Atom' : Type u}  (f : Atom → Proposition Atom') (x : Atom) :
+  .atom x >>= f = f x := rfl
+
+@[simp] lemma bind_and {Atom Atom' : Type u}  (f : Atom → Proposition Atom')
+  (A B : Proposition Atom) : (A ∧ B) >>= f = ((A >>= f) ∧ (B >>= f)) := rfl
+
+@[simp] lemma bind_or {Atom Atom' : Type u}  (f : Atom → Proposition Atom')
+  (A B : Proposition Atom) : (A ∨ B) >>= f = ((A >>= f) ∨ (B >>= f)) := rfl
+
+@[simp] lemma bind_impl {Atom Atom' : Type u}  (f : Atom → Proposition Atom')
+  (A B : Proposition Atom) : (A → B) >>= f = ((A >>= f) → (B >>= f)) := rfl
 
 /-- Theories are arbitrary sets of propositions. -/
 abbrev Theory (Atom) := Set (Proposition Atom)
