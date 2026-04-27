@@ -151,12 +151,4 @@ def intuitionisticCompletion (T : Theory Atom) : Theory (WithBot Atom) :=
 instance instIsIntuitionisticIntuitionisticCompletion (T : Theory Atom) :
     IsIntuitionistic T.intuitionisticCompletion := by grind
 
-/-- Attach a bottom element to a theory `T`, and the principle of explosion for that bottom. -/
-@[reducible]
-def classicalCompletion (T : Theory Atom) : Theory (WithBot Atom) :=
-  (WithBot.some <$> T) ∪ CPL
-
-instance instIsClassicalClassicalCompletion (T : Theory Atom) :
-    IsClassical T.classicalCompletion := by grind
-
 end Cslib.Logic.PL.Theory
