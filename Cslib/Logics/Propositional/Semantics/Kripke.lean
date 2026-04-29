@@ -7,7 +7,6 @@ module
 
 public import Cslib.Logics.Propositional.Semantics.Heyting
 public import Mathlib.Order.UpperLower.CompleteLattice
-public import Mathlib.Order.PrimeSeparator
 public import Cslib.ForMathlib.Order.PrimeSeparator
 public import Mathlib.Data.Sum.Order
 
@@ -84,13 +83,14 @@ theorem Theory.Derivation.forces [DecidableEq Atom] {Γ : Ctx Atom} {B : Proposi
 
 open Order Ideal PFilter Valuation OrderDual
 
-variable {H : Type*} [HeytingAlgebra H] (v : Valuation Atom H) {F : PFilter H} (hF : F.IsPrime)
+variable {H : Type*} [GeneralizedHeytingAlgebra H] (v : Valuation Atom H) {F : PFilter H}
+  (hF : F.IsPrime)
 
 def KripkeModel.ofHeyting : KripkeModel Atom {F : PFilter H // F.IsPrime} where
   Forces' F x := v x ∈ F.val
   forces'_monotone _ _ hle _ h := hle h
 
-lemma KripkeModel.ofHforces_iff (A : Proposition Atom) :
+lemma KripkeModel.ofHyeting_forces_iff (A : Proposition Atom) :
     (⟨F, hF⟩ ⊨[ofHeyting v] A) ↔ v⟦A⟧ ∈ F := by
   induction A generalizing F with
   | atom x => simp [ofHeyting, Forces, pInterpret]
@@ -111,7 +111,7 @@ lemma KripkeModel.ofHforces_iff (A : Proposition Atom) :
         rw [Set.disjoint_iff]
         intro x ⟨hx, hx'⟩
         obtain ⟨f, hf, hle⟩ : ∃ f ∈ F, f ⊓ v⟦A⟧ ≤ x := by
-          rwa [PFilter.mem_coe, DistribLattice.mem_pFilter_sup_principal] at hx
+          rwa [PFilter.mem_coe, Lattice.mem_pFilter_sup_principal] at hx
         rw [Ideal.mem_coe, Ideal.mem_principal] at hx'
         refine hc <| F.mem_of_le ?_ hf
         rw [pInterpret, le_himp_iff]
@@ -133,7 +133,7 @@ lemma KripkeModel.ofHforces_iff (A : Proposition Atom) :
 
 theorem KripkeModel.ofHeyting_spec (A : Proposition Atom) :
     (v ⊨ A) ↔ (∀ F hF, ⟨F, hF⟩ ⊨[ofHeyting v] A) := by
-  simp_rw [PValid, KripkeModel.ofHforces_iff]
+  simp_rw [PValid, KripkeModel.ofHyeting_forces_iff]
   constructor
   · intro h F hF
     exact h ▸ F.top_mem
@@ -151,8 +151,7 @@ theorem KripkeModel.ofHeyting_spec (A : Proposition Atom) :
     simp_rw [Set.not_disjoint_iff, Ideal.mem_coe]
     use v⟦A⟧, hmem, Ideal.mem_principal_self
 
-theorem KripkeModel.complete [Bot Atom] [DecidableEq Atom] [IsIntuitionistic T]
-    {B : Proposition Atom} :
+theorem KripkeModel.complete [Bot Atom] [DecidableEq Atom] {B : Proposition Atom} :
     DerivableIn T B ↔ ∀ {Worlds : Type u} [PartialOrder Worlds] (C : KripkeModel Atom Worlds)
       (c : Worlds), (∀ A ∈ T, c ⊨[C] A) → c ⊨[C] B := by
   constructor
@@ -202,7 +201,26 @@ lemma KripkeModel.disj_inr_forces {W W' : Type*} [PartialOrder W] [PartialOrder 
     (↑(Sum.inr c' : (W ⊕ W')) ⊨[C.disj C'] A) ↔ c' ⊨[C'] A := by
   induction A generalizing c' <;> simp_all [Forces, disj]
 
-theorem disjunction_property [Bot Atom] [DecidableEq Atom] {A B : Proposition Atom}
+theorem MPL.disjunction_property [Bot Atom] [DecidableEq Atom] {A B : Proposition Atom}
+    (h : DerivableIn (MPL (Atom := Atom)) (A ∨ B)) :
+    DerivableIn (MPL (Atom := Atom)) A ∨ DerivableIn (MPL (Atom := Atom)) B := by
+  simp_rw [KripkeModel.complete] at h ⊢
+  contrapose! h
+  obtain ⟨⟨WA, _, CA, cA, hCA, hcA⟩, ⟨WB, _, CB, cB, hCB, hcB⟩⟩ := h
+  use WithBot ((Set.Ici cA) ⊕ (Set.Ici cB)), inferInstance,
+    KripkeModel.disj (CA.restrict _) (CB.restrict _), ⊥
+  refine ⟨fun _ => False.elim, ?_⟩
+  rintro (h | h)
+  · apply hcA
+    rw [←KripkeModel.restrict_forces_iff_of_isUpperSet (c := ⟨cA, le_rfl⟩) (isUpperSet_Ici cA),
+      ←(CA.restrict (Set.Ici cA)).disj_inl_forces (CB.restrict (Set.Ici cB))]
+    exact KripkeModel.forces_monotone bot_le _ h
+  · apply hcB
+    rw [←KripkeModel.restrict_forces_iff_of_isUpperSet (c := ⟨cB, le_rfl⟩) (isUpperSet_Ici cB),
+      ←(CA.restrict (Set.Ici cA)).disj_inr_forces (CB.restrict (Set.Ici cB))]
+    exact KripkeModel.forces_monotone bot_le _ h
+
+theorem IPL.disjunction_property [Bot Atom] [DecidableEq Atom] {A B : Proposition Atom}
     (h : DerivableIn (IPL (Atom := Atom)) (A ∨ B)) :
     DerivableIn (IPL (Atom := Atom)) A ∨ DerivableIn (IPL (Atom := Atom)) B := by
   simp_rw [KripkeModel.complete] at h ⊢
