@@ -132,4 +132,18 @@ class IsClassical (Atom : Type u) [Bot Atom] (S : Type*)
     [InferenceSystem S (Proposition Atom)] where
   dne (A : Proposition Atom) : S⇓(¬¬A → A)
 
+-- should this be proof-relevant?
+@[mk_iff]
+class IsInconsistent (Atom : Type u) (S : Type*) [InferenceSystem S (Proposition Atom)] where
+  forall_derivableIn (A : Proposition Atom) : DerivableIn S A
+
+@[mk_iff]
+class IsConsistent (Atom : Type u) (S : Type*) [InferenceSystem S (Proposition Atom)] where
+  exists_not_derivableIn : ∃ A : Proposition Atom, ¬ DerivableIn S A
+
+omit [DecidableEq Atom] in
+lemma isInconsistent_iff_not_isConsistent {S : Type*} [InferenceSystem S (Proposition Atom)] :
+    IsInconsistent Atom S ↔ ¬ IsConsistent Atom S := by
+  simp [isInconsistent_iff, isConsistent_iff]
+
 end Cslib.Logic.PL.Theory
