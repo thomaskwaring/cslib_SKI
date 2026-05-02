@@ -93,12 +93,12 @@ def KripkeModel.ofHeyting : KripkeModel Atom {F : PFilter H // F.IsPrime} where
 lemma KripkeModel.ofHyeting_forces_iff (A : Proposition Atom) :
     (⟨F, hF⟩ ⊨[ofHeyting v] A) ↔ v⟦A⟧ ∈ F := by
   induction A generalizing F with
-  | atom x => simp [ofHeyting, Forces, pInterpret]
+  | atom x => simp [ofHeyting, Forces, interp]
   | and A B aih bih =>
-    simp_rw [Forces, pInterpret, aih, bih]
+    simp_rw [Forces, interp, aih, bih]
     exact F.inf_mem_iff.symm
   | or A B aih bih =>
-    simp_rw [Forces, pInterpret, aih, bih]
+    simp_rw [Forces, interp, aih, bih]
     refine ⟨?_, hF.mem_or_mem⟩
     rintro (hA | hB)
     · exact F.mem_of_le le_sup_left hA
@@ -114,7 +114,7 @@ lemma KripkeModel.ofHyeting_forces_iff (A : Proposition Atom) :
           rwa [PFilter.mem_coe, Lattice.mem_pFilter_sup_principal] at hx
         rw [Ideal.mem_coe, Ideal.mem_principal] at hx'
         refine hc <| F.mem_of_le ?_ hf
-        rw [pInterpret, le_himp_iff]
+        rw [interp, le_himp_iff]
         exact hle.trans hx'
       obtain ⟨G, hG, hle, hdisj⟩ := DistribLattice.prime_filter_of_disjoint_filter_ideal hdisj
       have hGA : ⟨G, hG⟩ ⊨[ofHeyting v] A := by
@@ -129,7 +129,7 @@ lemma KripkeModel.ofHyeting_forces_iff (A : Proposition Atom) :
     · intro ⟨G, hG⟩ hle hA
       rw [aih hG] at hA
       rw [bih hG]
-      exact G.mem_of_le (x := v⟦A⟧ ⊓ v⟦A → B⟧) (by simp [pInterpret]) <| inf_mem_iff.mpr ⟨hA, hle h⟩
+      exact G.mem_of_le (x := v⟦A⟧ ⊓ v⟦A → B⟧) (by simp [interp]) <| inf_mem_iff.mpr ⟨hA, hle h⟩
 
 theorem KripkeModel.ofHeyting_spec (A : Proposition Atom) :
     (v ⊨ A) ↔ (∀ F hF, ⟨F, hF⟩ ⊨[ofHeyting v] A) := by

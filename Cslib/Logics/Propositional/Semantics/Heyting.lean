@@ -21,43 +21,43 @@ open Theory Derivation InferenceSystem Proposition
 abbrev Valuation (Atom : Type*) (H : Type*) := Atom → H
 
 /-- Extend a valuation to propositions using the Heyting algebra operations. -/
-def Valuation.pInterpret {H : Type _} [GeneralizedHeytingAlgebra H] (v : Valuation Atom H) :
+def Valuation.interp {H : Type _} [GeneralizedHeytingAlgebra H] (v : Valuation Atom H) :
     Proposition Atom → H
   | atom x => v x
-  | Proposition.and A B => (v.pInterpret A) ⊓ (v.pInterpret B)
-  | Proposition.or A B => (v.pInterpret A) ⊔ (v.pInterpret B)
-  | impl A B => (v.pInterpret A) ⇨ (v.pInterpret B)
+  | Proposition.and A B => (v.interp A) ⊓ (v.interp B)
+  | Proposition.or A B => (v.interp A) ⊔ (v.interp B)
+  | impl A B => (v.interp A) ⇨ (v.interp B)
 
 variable {H : Type _} [iH : GeneralizedHeytingAlgebra H] (v : Valuation Atom H)
 
 instance {H : Type _} [GeneralizedHeytingAlgebra H] :
     CoeFun (Valuation Atom H) (fun _ => Proposition Atom → H) where
-  coe := Valuation.pInterpret
+  coe := Valuation.interp
 
 /-- Extend a valuation to contexts using conjunction. -/
 def Valuation.ctxInterpret {H : Type _} [GeneralizedHeytingAlgebra H] (v : Valuation Atom H)
-    (Γ : Ctx Atom) : H := Γ.inf (v.pInterpret)
+    (Γ : Ctx Atom) : H := Γ.inf (v.interp)
 
 @[inherit_doc]
-scoped notation v "⟦" A "⟧" => Valuation.pInterpret v A
+scoped notation v "⟦" A "⟧" => Valuation.interp v A
 
 @[inherit_doc]
 scoped notation v "⟦" Γ "⟧" => Valuation.ctxInterpret v Γ
 
 omit [DecidableEq Atom] in
-@[simp] lemma Valuation.pInterpret_atom (v : Valuation Atom H) (x : Atom) :
+@[simp] lemma Valuation.interp_atom (v : Valuation Atom H) (x : Atom) :
   v⟦atom x⟧ = v x := rfl
 
 omit [DecidableEq Atom] in
-@[simp] lemma Valuation.pInterpret_and (v : Valuation Atom H) (A B : Proposition Atom) :
+@[simp] lemma Valuation.interp_and (v : Valuation Atom H) (A B : Proposition Atom) :
   v⟦A ∧ B⟧ = v⟦A⟧ ⊓ v⟦B⟧ := rfl
 
 omit [DecidableEq Atom] in
-@[simp] lemma Valuation.pInterpret_or (v : Valuation Atom H) (A B : Proposition Atom) :
+@[simp] lemma Valuation.interp_or (v : Valuation Atom H) (A B : Proposition Atom) :
   v⟦A ∨ B⟧ = v⟦A⟧ ⊔ v⟦B⟧ := rfl
 
 omit [DecidableEq Atom] in
-@[simp] lemma Valuation.pInterpret_impl (v : Valuation Atom H) (A B : Proposition Atom) :
+@[simp] lemma Valuation.interp_impl (v : Valuation Atom H) (A B : Proposition Atom) :
   v⟦A → B⟧ = v⟦A⟧ ⇨ v⟦B⟧ := rfl
 
 open Valuation
@@ -95,7 +95,7 @@ theorem Valuation.IPL_valid_of_heytingAlgebra [Bot Atom] {H' : Type _} [HeytingA
   intro hv A hA
   rw [Set.mem_range] at hA
   replace ⟨A', hA⟩ := hA
-  simp_rw [←hA, PValid, pInterpret, hv]
+  simp_rw [←hA, PValid, interp, hv]
   exact bot_himp _
 
 omit [DecidableEq Atom] in
@@ -103,7 +103,7 @@ theorem Valuation.CPL_valid_of_booleanAlgebra [Bot Atom] {H' : Type _} [BooleanA
     {v : Valuation Atom H'} :
     v ⊥ = ⊥ → v ⊨ CPL := by
   rintro hv A ⟨A', rfl⟩
-  simp [PValid, pInterpret, hv]
+  simp [PValid, interp, hv]
 
 variable {v : Valuation Atom H}
 
@@ -123,7 +123,7 @@ theorem Theory.Derivation.sound' {Γ : Ctx Atom} {B : Proposition Atom}
     refine le_trans ?_ (sup_le aih bih)
     simpa [Valuation.ctxInterpret, Finset.inf_insert, ←inf_sup_right]
   | implI Γ _ ih =>
-    rw [Valuation.pInterpret, le_himp_iff, inf_comm]
+    rw [Valuation.interp, le_himp_iff, inf_comm]
     rwa [Valuation.ctxInterpret, Finset.inf_insert] at ih
   | implE  _ _ ih ih' => exact (le_inf ih ih').trans himp_inf_le
 
@@ -307,7 +307,7 @@ def Theory.canonicalV (T : Theory Atom) : (Valuation Atom <| Quotient T.proposit
   fun x => ⟦atom x⟧
 
 theorem Theory.canonicalV_spec [Inhabited Atom] (A : Proposition Atom) :
-    T.canonicalV.pInterpret A = ⟦A⟧ := by
+    T.canonicalV.interp A = ⟦A⟧ := by
   induction A with
   | atom _ => simp! [Theory.canonicalV]
   | and _ _ ihA ihB => simp! [min, SemilatticeInf.inf, Lattice.inf, ihA, ihB]
@@ -369,7 +369,7 @@ theorem GeneralizedHeytingHom.map_interpret (f : GeneralizedHeytingHom H H')
     (A : Proposition Atom) (v : Valuation Atom H) : f (v⟦A⟧) = (f ∘ v)⟦A⟧ := by
   induction A
   case atom _ => rfl
-  all_goals simp_all [Valuation.pInterpret]
+  all_goals simp_all [Valuation.interp]
 
 def Theory.Extension.toGeneralizedHeytingHom [DecidableEq Atom] [DecidableEq Atom']
     [Inhabited Atom] [Inhabited Atom'] (e : T.Extension T') :
