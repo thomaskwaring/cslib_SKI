@@ -25,13 +25,17 @@ namespace Theory
 
 /-! ### Ordering -/
 
+/-- `T.Embedding T'` packages the information required to lift `T`-derivations into
+  `T'`-derivations. See `Derivation.mapEmbedding`. -/
 protected structure Embedding (T T' : Theory Atom) where
+  /-- A `T` derivation of every `T`-axiom. -/
   derOfMem {A : Proposition Atom} (hA : A ∈ T) : T'⇓A
 
 open Embedding
 
 variable {T T' T'' : Theory Atom}
 
+/-- Map a derivation along an embedding. -/
 def Derivation.mapEmbedding (emb : T.Embedding T') {Γ : Ctx Atom} {A : Proposition Atom} :
     T.Derivation Γ A → T'.Derivation Γ A
   | ax hA => (emb.derOfMem hA).weak_ctx (Finset.empty_subset Γ)
@@ -47,28 +51,33 @@ def Derivation.mapEmbedding (emb : T.Embedding T') {Γ : Ctx Atom} {A : Proposit
 
 namespace Embedding
 
-def ofSubset (h : T ⊆ T') : T.Embedding T' where
-  derOfMem hA := ax (h hA)
+/-- If `T` is a subset of `T'`, `T` embeds into `T'`. -/
+def ofSubset (h : T ⊆ T') : T.Embedding T' := ⟨fun hA => ax (h hA)⟩
 
-protected def refl : T.Embedding T where
-  derOfMem hA := ax hA
+/-- A theory embeds into itself. -/
+protected def refl : T.Embedding T := ⟨(ax ·)⟩
 
-protected def comp (emb : T.Embedding T') (emb' : T'.Embedding T'') : T.Embedding T'' where
-  derOfMem hA := (emb.derOfMem hA).mapEmbedding emb'
+/-- Composition of two embeddings. -/
+protected def comp (emb : T.Embedding T') (emb' : T'.Embedding T'') : T.Embedding T'' :=
+  ⟨fun hA => (emb.derOfMem hA).mapEmbedding emb'⟩
 
 end Embedding
 
+/-- `T` is weaker than `T'` if it embeds into `T'`. This is equivalent to every proposition
+derivable in `T` being derivable in `T'`. -/
 def WeakerThan (T T' : Theory Atom) : Prop := Nonempty (T.Embedding T')
 
 instance : LE (Theory Atom) where
   le := Theory.WeakerThan
 
-def WeakerThan.mk' (h : ∀ {A}, A ∈ T → DerivableIn T' A) : T ≤ T' := ⟨⟨fun hA => h hA⟩⟩
+lemma WeakerThan.mk' (h : ∀ {A}, A ∈ T → DerivableIn T' A) : T ≤ T' := ⟨⟨fun hA => h hA⟩⟩
 
+/-- Noncomputably obtain an embedding from `T ≤ T'`. -/
 noncomputable def WeakerThan.embedding (h : T ≤ T') : T.Embedding T' := h.some
 
 lemma WeakerThan.of_subset (h : T ⊆ T') : T ≤ T' := ⟨Embedding.ofSubset h⟩
 
+/-- Noncomputably turn a `T` derivation into a `T'` derivation, for `T ≤ T'`. -/
 noncomputable def Derivation.mapLE (h : T ≤ T') {Γ : Ctx Atom} {A : Proposition Atom}
     (D : T⇓(Γ ⊢ A)) : T'⇓(Γ ⊢ A) := D.mapEmbedding h.embedding
 
@@ -111,6 +120,7 @@ end WeakerThan
 
 open WeakerThan
 
+/-- Equivalence `T ≈ T'` holds if `T` is weaker than `T'` and vice-versa. -/
 instance theorySetoid : Setoid (Theory Atom) := AntisymmRel.setoid (Theory Atom) WeakerThan
 
 lemma setoid_def : T ≈ T' ↔ T ≤ T' ∧ T' ≤ T := Iff.rfl
@@ -132,8 +142,10 @@ lemma equiv_iff_forall_derivableIn_derivableIn :
 
 /-! ### Saturated theories -/
 
+/-- A theory is saturated if it contains every proposition which it derives. -/
 def Saturated (T : Theory Atom) : Prop := ∀ A : Proposition Atom, DerivableIn T A → A ∈ T
 
+/-- The saturation of a theory is the collection of all propositions it derives. -/
 def saturation (T : Theory Atom) : Theory Atom := {A : Proposition Atom | DerivableIn T A }
 
 lemma subset_saturation_self : T ⊆ T.saturation := fun _ hA => ⟨ax hA⟩
@@ -170,26 +182,30 @@ lemma saturation_idem : T.saturation.saturation = T.saturation :=
 lemma isInconsistent_iff_saturation_eq_top : IsInconsistent Atom T ↔ T.saturation = ⊤ := by
   simp [isInconsistent_iff, saturation, Top.top, Set.eq_univ_iff_forall]
 
-/-! ### Intuitionistic and classical theories-/
+/-! ### Intuitionistic and classical theories -/
 
 variable [Bot Atom] {T T' T'' : Theory Atom}
 
+/-- `IPL` is indeed intuitionistic. -/
 instance instIsIntuitionisticIPL : IsIntuitionistic Atom (IPL Atom) where
   efq A := ax (efq_mem_ipl A)
 
+/-- `IPL` embeds into every intuitionisitc theory carries an embedding. -/
 noncomputable def IsIntuitionistic.embeddingIPL [IsIntuitionistic Atom T] :
     (IPL Atom).Embedding T where
   derOfMem hA := by rw [←Classical.choose_spec hA]; exact efq _
 
-@[implicit_reducible]
-def instIsIntuitionisticOfEmbedding [IsIntuitionistic Atom T]
+/-- If an intuitionistic theory embeds into `T`, it itself is intuitionistic. -/
+@[implicit_reducible] def instIsIntuitionisticOfEmbedding [IsIntuitionistic Atom T]
     (emb : T.Embedding T') : IsIntuitionistic Atom T' where
   efq A := (efq A : T⇓(⊥ → A)).mapEmbedding emb
 
-instance instIsIntuitionisticOfEmbeddingIPL (emb : (IPL Atom).Embedding T') :
-  IsIntuitionistic Atom T' where
-    efq A := (efq A : (IPL Atom)⇓(⊥ → A)).mapEmbedding emb
+lemma IsIntuitionistic.nonempty_iff_ipl_le : Nonempty (IsIntuitionistic Atom T) ↔ IPL Atom ≤ T := by
+  constructor
+  · exact fun ⟨_⟩ => ⟨embeddingIPL⟩
+  · exact fun hle => ⟨instIsIntuitionisticOfEmbedding hle.embedding⟩
 
+/-- Derivation of efq in an arbitrary context. -/
 def IsIntuitionistic.efqCtx [IsIntuitionistic Atom T] (Γ : Ctx Atom) (A : Proposition Atom)
     : T⇓(Γ ⊢ ⊥ → A) := (efq A : T⇓(⊥ → A)).weak_ctx (Finset.empty_subset Γ)
 
@@ -211,21 +227,26 @@ lemma IsIntuitionistic.isInconsistent_iff_derivableIn_bot [IsIntuitionistic Atom
   intro A
   exact ⟨efqRule ∅ A D⟩
 
+/-- `CPL` is indeed classical. -/
 instance instIsClassicalCPL : IsClassical Atom (CPL Atom) where
   dne A := ax (dne_mem_cpl A)
 
+/-- `CPL` embeds into any classical theory. -/
 noncomputable def IsClassical.embeddingCPL [IsClassical Atom T] : (CPL Atom).Embedding T where
   derOfMem hA := by rw [←Classical.choose_spec hA]; exact dne _
 
+/-- Obtain `IsClassical Atom T'` from an embedding into `T'` of a classical theory `T`. -/
 @[implicit_reducible]
 def instIsClassicalOfEmbedding [IsClassical Atom T] (emb : T.Embedding T') :
     IsClassical Atom T' where
   dne A := (dne A : T⇓(¬¬A → A)).mapEmbedding emb
 
-instance instIsClassicalOfEmbeddingCPL (emb : (CPL Atom).Embedding T') :
-    IsClassical Atom T' where
-  dne A := (dne A : (CPL Atom)⇓(¬¬A → A)).mapEmbedding emb
+lemma IsClassical.nonempty_iff_cpl_le : Nonempty (IsClassical Atom T) ↔ CPL Atom ≤ T := by
+  constructor
+  · exact fun ⟨_⟩ => ⟨embeddingCPL⟩
+  · exact fun hle => ⟨instIsClassicalOfEmbedding hle.embedding⟩
 
+/-- Proof by contradiction as a derived rule. -/
 def IsClassical.byContra [IsClassical Atom T] {Γ : Ctx Atom} {A : Proposition Atom}
     (D : T⇓(insert (¬ A) Γ ⊢ ⊥)) : T⇓(Γ ⊢ A) :=
   implE (A := ¬¬A) ((dne A : T⇓(¬¬A → A)) |>.weak_ctx <| Finset.empty_subset ..) D.implI
@@ -233,6 +254,7 @@ def IsClassical.byContra [IsClassical Atom T] {Γ : Ctx Atom} {A : Proposition A
 instance instIsIntuitionisticOfIsClassical [IsClassical Atom T] : IsIntuitionistic Atom T where
   efq A := implI _ <| byContra <| ass (by grind)
 
+/-- Law of excluded middle in a classical theory. -/
 def IsClassical.lem [IsClassical Atom T] (A : Proposition Atom) : T⇓(A ∨ ¬ A) := by
   apply byContra
   apply implE (ass <| Finset.mem_insert_self ..)
@@ -240,10 +262,12 @@ def IsClassical.lem [IsClassical Atom T] (A : Proposition Atom) : T⇓(A ∨ ¬ 
   apply implE (A := A ∨ ¬ A) (ass <| by grind)
   exact orI₁ <| ass <| Finset.mem_insert_self ..
 
+/-- Proof by cases for a classical theory. -/
 def IsClassical.byCases [IsClassical Atom T] {Γ : Ctx Atom} {A B : Proposition Atom}
     (D : T⇓(insert A Γ ⊢ B)) (D' : T⇓(insert (¬ A) Γ ⊢ B)) : T⇓(Γ ⊢ B) :=
   (lem A |>.weak_ctx <| Finset.empty_subset Γ).orE D D'
 
+/-- Pierce's law in a classical theory. -/
 def IsClassical.pierce [IsClassical Atom T] (A B : Proposition Atom) : T⇓(((A → B) → A) → A) := by
   apply implI; apply byContra
   apply implE (ass <| Finset.mem_insert_self ..)
@@ -256,6 +280,7 @@ def LEM (Atom : Type u) [Bot Atom] : Theory Atom := {A ∨ ¬ A | A : Propositio
 omit [DecidableEq Atom] in
 lemma lem_mem_lem (A : Proposition Atom) : (A ∨ ¬ A) ∈ LEM Atom := ⟨A, rfl⟩
 
+/-- `LEM` extends `IPL` to a classical theory. -/
 instance instIsClassicalLEM : IsClassical Atom (LEM Atom ∪ IPL Atom : Theory Atom) where
   dne A := by
     have : IsIntuitionistic Atom (LEM Atom ∪ IPL Atom : Theory Atom) :=
@@ -281,6 +306,7 @@ def Pierce (Atom : Type u) : Theory Atom :=
 omit [DecidableEq Atom] [Bot Atom] in
 lemma pierce_mem_pierce (A B : Proposition Atom) : (((A → B) → A) → A) ∈ Pierce Atom := ⟨A, B, rfl⟩
 
+/-- Pierce's law extends `IPL` to a classical theory. -/
 instance instIsClassicalPierce : IsClassical Atom (Pierce Atom ∪ IPL Atom : Theory Atom) where
   dne A := by
     have : IsIntuitionistic Atom (Pierce Atom ∪ IPL Atom : Theory Atom) :=
