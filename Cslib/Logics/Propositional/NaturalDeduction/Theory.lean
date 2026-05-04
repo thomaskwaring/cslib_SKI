@@ -7,7 +7,12 @@ module
 
 public import Cslib.Logics.Propositional.NaturalDeduction.Basic
 
-/-! # Results on propositional theories -/
+/-! # Results on propositional theories
+
+In this file we prove the expected results that `IPL Atom` is an intuitionistic theory, and
+`CPL Atom` is a classical theory. We provide derived rules for common intuitionistic and classical
+proof patterns.
+-/
 
 @[expose] public section
 
