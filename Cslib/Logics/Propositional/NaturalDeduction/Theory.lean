@@ -83,10 +83,6 @@ instance instPreorderTheory : Preorder (Theory Atom) where
   le_refl T := ⟨Embedding.refl⟩
   le_trans _ _ _ h h' := ⟨h.embedding.comp h'.embedding⟩
 
-instance theorySetoid : Setoid (Theory Atom) := AntisymmRel.setoid (Theory Atom) WeakerThan
-
-lemma setoid_equiv_iff : T ≈ T' ↔ T ≤ T' ∧ T' ≤ T := Iff.rfl
-
 lemma iff_forall_mem_derivableIn :
     T ≤ T' ↔ ∀ {A : Proposition Atom}, A ∈ T → DerivableIn T' A :=
   ⟨fun h _ hA => ⟨h.embedding.derOfMem hA⟩, .mk'⟩
@@ -115,6 +111,25 @@ end WeakerThan
 
 open WeakerThan
 
+instance theorySetoid : Setoid (Theory Atom) := AntisymmRel.setoid (Theory Atom) WeakerThan
+
+lemma setoid_def : T ≈ T' ↔ T ≤ T' ∧ T' ≤ T := Iff.rfl
+
+lemma equiv_iff_forall_mem_derivableIn :
+    T ≈ T' ↔ (∀ A ∈ T, DerivableIn T' A) ∧ (∀ A ∈ T', DerivableIn T A) := by
+  simp_rw [setoid_def, iff_forall_mem_derivableIn]
+
+lemma equiv_iff_forall_derivableIn_derivableIn :
+    T ≈ T' ↔ ∀ A : Proposition Atom, DerivableIn T A ↔ DerivableIn T' A := by
+  constructor
+  · intro ⟨h, h'⟩ A
+    exact ⟨iff_forall_derivableIn_of_derivableIn.mp h A,
+      iff_forall_derivableIn_of_derivableIn.mp h' A⟩
+  · intro h
+    refine ⟨iff_forall_derivableIn_of_derivableIn.mpr fun A => (h A).mp,
+      iff_forall_derivableIn_of_derivableIn.mpr fun A => (h A).mpr⟩
+
+
 /-! ### Saturated theories -/
 
 def Saturated (T : Theory Atom) : Prop := ∀ A : Proposition Atom, DerivableIn T A → A ∈ T
@@ -137,7 +152,7 @@ lemma le_iff_saturation_subset_saturation : T ≤ T' ↔ T.saturation ⊆ T'.sat
   rfl
 
 lemma equiv_iff_saturation_eq : T ≈ T' ↔ T.saturation = T'.saturation := by
-  simp_rw [setoid_equiv_iff, le_iff_saturation_subset_saturation, Set.Subset.antisymm_iff]
+  simp_rw [setoid_def, le_iff_saturation_subset_saturation, Set.Subset.antisymm_iff]
 
 lemma saturation_saturated : T.saturation.Saturated := by
   rw [←Saturated.iff_saturation_subset, ←le_iff_saturation_subset_saturation]
@@ -218,7 +233,6 @@ def IsClassical.byContra [IsClassical Atom T] {Γ : Ctx Atom} {A : Proposition A
 instance instIsIntuitionisticOfIsClassical [IsClassical Atom T] : IsIntuitionistic Atom T where
   efq A := implI _ <| byContra <| ass (by grind)
 
-/-- Law of excluded middle in a classical theory. -/
 def IsClassical.lem [IsClassical Atom T] (A : Proposition Atom) : T⇓(A ∨ ¬ A) := by
   apply byContra
   apply implE (ass <| Finset.mem_insert_self ..)
@@ -226,7 +240,10 @@ def IsClassical.lem [IsClassical Atom T] (A : Proposition Atom) : T⇓(A ∨ ¬ 
   apply implE (A := A ∨ ¬ A) (ass <| by grind)
   exact orI₁ <| ass <| Finset.mem_insert_self ..
 
-/-- Pierce's law in a classical theory. -/
+def IsClassical.byCases [IsClassical Atom T] {Γ : Ctx Atom} {A B : Proposition Atom}
+    (D : T⇓(insert A Γ ⊢ B)) (D' : T⇓(insert (¬ A) Γ ⊢ B)) : T⇓(Γ ⊢ B) :=
+  (lem A |>.weak_ctx <| Finset.empty_subset Γ).orE D D'
+
 def IsClassical.pierce [IsClassical Atom T] (A B : Proposition Atom) : T⇓(((A → B) → A) → A) := by
   apply implI; apply byContra
   apply implE (ass <| Finset.mem_insert_self ..)
@@ -239,13 +256,6 @@ def LEM (Atom : Type u) [Bot Atom] : Theory Atom := {A ∨ ¬ A | A : Propositio
 omit [DecidableEq Atom] in
 lemma lem_mem_lem (A : Proposition Atom) : (A ∨ ¬ A) ∈ LEM Atom := ⟨A, rfl⟩
 
-/-- The axiom system consisting of instances of Pierce's law. -/
-def Pierce (Atom : Type u) : Theory Atom :=
-  {((A → B) → A) → A | (A : Proposition Atom) (B : Proposition Atom)}
-
-omit [DecidableEq Atom] [Bot Atom] in
-lemma pierce_mem_pierce (A B : Proposition Atom) : (((A → B) → A) → A) ∈ Pierce Atom := ⟨A, B, rfl⟩
-
 instance instIsClassicalLEM : IsClassical Atom (LEM Atom ∪ IPL Atom : Theory Atom) where
   dne A := by
     have : IsIntuitionistic Atom (LEM Atom ∪ IPL Atom : Theory Atom) :=
@@ -256,12 +266,20 @@ instance instIsClassicalLEM : IsClassical Atom (LEM Atom ∪ IPL Atom : Theory A
     · apply contra (¬A) A <;> grind
 
 theorem CPL_equiv_LEM_union_IPL : CPL Atom ≈ (LEM Atom ∪ IPL Atom : Theory Atom) := by
-  rw [setoid_equiv_iff]
-  refine ⟨⟨embeddingCPL⟩, ?_⟩
-  rw [iff_forall_mem_derivableIn]
-  rintro _ (⟨A, rfl⟩ | ⟨A, rfl⟩)
-  · exact ⟨lem A⟩
-  · exact ⟨efq A⟩
+  rw [equiv_iff_forall_mem_derivableIn]
+  constructor
+  · intro _ hA
+    exact ⟨(ax hA).mapEmbedding embeddingCPL⟩
+  · rintro _ (⟨A, rfl⟩ | ⟨A, rfl⟩)
+    · exact ⟨lem A⟩
+    · exact ⟨efq A⟩
+
+/-- The axiom system consisting of instances of Pierce's law. -/
+def Pierce (Atom : Type u) : Theory Atom :=
+  {((A → B) → A) → A | (A : Proposition Atom) (B : Proposition Atom)}
+
+omit [DecidableEq Atom] [Bot Atom] in
+lemma pierce_mem_pierce (A B : Proposition Atom) : (((A → B) → A) → A) ∈ Pierce Atom := ⟨A, B, rfl⟩
 
 instance instIsClassicalPierce : IsClassical Atom (Pierce Atom ∪ IPL Atom : Theory Atom) where
   dne A := by
@@ -273,11 +291,12 @@ instance instIsClassicalPierce : IsClassical Atom (Pierce Atom ∪ IPL Atom : Th
     apply contra (¬ A) A <;> grind
 
 theorem CPL_equiv_pierce_union_IPL : CPL Atom ≈ (Pierce Atom ∪ IPL Atom : Theory Atom) := by
-  rw [setoid_equiv_iff]
-  refine ⟨⟨embeddingCPL⟩, ?_⟩
-  rw [iff_forall_mem_derivableIn]
-  rintro _ (⟨A, B, rfl⟩ | ⟨A, rfl⟩)
-  · exact ⟨pierce A B⟩
-  · exact ⟨efq A⟩
+  rw [equiv_iff_forall_mem_derivableIn]
+  constructor
+  · intro _ hA
+    exact ⟨(ax hA).mapEmbedding embeddingCPL⟩
+  · rintro _ (⟨A, B, rfl⟩ | ⟨A, rfl⟩)
+    · exact ⟨pierce A B⟩
+    · exact ⟨efq A⟩
 
 end Cslib.Logic.PL.Theory
