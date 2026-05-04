@@ -9,7 +9,26 @@ public import Cslib.Logics.Propositional.NaturalDeduction.Basic
 public import Mathlib.Order.Antisymmetrization
 public import Mathlib.Tactic.TFAE
 
-/-! # Results and constructions for propositional theories -/
+/-! # Results and constructions for propositional theories
+
+This file provides results and constructions for manipulating proposition theories.
+
+## Main definitions
+
+- `Theory.Embedding`, `Theory.WeakerThan` : proof-relevant and -irrelevant ordering between
+  theories. Any `T` derivations maps along `emb : T.Embedding T'` into a `T'` derivation.
+- `Theory.Saturated` : a theory which contains all of its theorems. Every theory `T` can be
+  completed to a saturated theory `T.saturation`.
+- `LEM` and `Pierce` are theories consisting of, respectively, instances of the law of excluded
+  middle and Pierce's law. These are used for alternative axiomatisations of classical logic.
+
+## Main results
+
+- `Theory.WeakerThan` is a preorder, and equality in its poset reflection (expressed as `T ≈ T'`)
+  is characterised by `T.saturation = T'.saturation`.
+- We show that `IPL` is an intuitionistic theory, and that the theories `CPL`, `LEM ∪ IPL` and
+  `Pierce ∪ IPL` are equivalent and classical.
+-/
 
 @[expose] public section
 
@@ -23,7 +42,7 @@ variable {Atom : Type u} [DecidableEq Atom]
 
 namespace Theory
 
-/-! ### Ordering -/
+/-! ### Ordering between theories -/
 
 /-- `T.Embedding T'` packages the information required to lift `T`-derivations into
   `T'`-derivations. See `Derivation.mapEmbedding`. -/
