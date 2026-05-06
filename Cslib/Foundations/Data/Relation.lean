@@ -205,7 +205,7 @@ theorem Confluent.equivalence_join_reflTransGen (h : Confluent r) :
 
 /-- An element `x` is `SN` (for strongly-normalising) for a relation `r` if it is accesible under
 the inverse of `r`. -/
-abbrev SN (r : α → α → Prop) (x : α) := Acc (fun a b => r b a) x
+abbrev SN (r : α → α → Prop) := Acc (fun a b => r b a)
 
 lemma SN_iff_SN_of_rel (x : α) : SN r x ↔ ∀ y, r x y → SN r y := by grind [Acc]
 
@@ -222,15 +222,16 @@ lemma SN.of_rel_reflTransGen (hx : SN r x) (h : ReflTransGen r x y) : SN r y := 
 lemma SN.transGen (hx : SN r x) : SN (TransGen r) x := by
   have eq : TransGen (Function.swap r) = (fun a b => TransGen r b a) := by
     ext
+    exact transGen_swap
   simpa [eq] using Acc.transGen hx
 
-lemma SN.subrelation {r' : α → α → Prop} (hx : SN r x) (h : Subrelation r' r) : SN r' x := by
+lemma SN.of_le {r' : α → α → Prop} (hx : SN r x) (h : r' ≤ r) : SN r' x := by
   refine Subrelation.accessible ?_ hx
-  grind [Subrelation]
+  exact subrelation_iff_le.mpr fun {x y} => h y x
 
 @[simp]
 lemma SN.iff_transGen (x : α) : SN (TransGen r) x ↔ SN r x :=
-  ⟨fun hx => hx.subrelation TransGen.single, transGen⟩
+  ⟨fun hx => hx.of_le <| fun _ _ => TransGen.single, transGen⟩
 
 /-- `SN r x` is equivalent to the more elementary definition, that there is no infinite sequence
 of reductions starting with `x`. -/
@@ -267,10 +268,10 @@ theorem Terminating.iff_isEmpty_chain :
     Terminating r ↔ IsEmpty {f : ℕ → α // ∀ n, r (f n) (f (n + 1))} :=
   wellFounded_iff_isEmpty_descending_chain
 
-theorem Terminating.subrelation {r' : α → α → Prop} (hr : Terminating r) (h : Subrelation r' r) :
+theorem Terminating.of_le {r' : α → α → Prop} (hr : Terminating r) (h : r' ≤ r) :
     Terminating r' := by
   rw [iff_forall_sn] at hr ⊢
-  exact fun x => (hr x).subrelation h
+  exact fun x => (hr x).of_le h
 
 lemma Terminating.subtype_sn (r : α → α → Prop) :
     Terminating (α := {x // SN r x}) (fun a b => r a b) :=

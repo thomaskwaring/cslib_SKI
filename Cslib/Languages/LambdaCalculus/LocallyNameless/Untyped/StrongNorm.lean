@@ -62,13 +62,13 @@ lemma sn_app (t s : Term Var) (sn_t : SN FullBeta t) (sn_s : SN FullBeta s)
 /-- The left side of a strongly normalizing application is strongly normalizing. -/
 lemma sn_app_left (M N : Term Var) (lc_N : Term.LC N) (sn_MN : SN FullBeta (M.app N)) :
     SN FullBeta M := by
-  refine sn_MN.onFun_of_image (f := fun (M : Term Var) => M.app N) |>.subrelation ?_
+  refine sn_MN.onFun_of_image (f := (·.app N)) |>.of_le fun _ _ => ?_
   exact Xi.appR lc_N
 
 /-- The right side of a strongly normalizing application is strongly normalizing. -/
 lemma sn_app_right (M N : Term Var) (lc_M : Term.LC M) (sn_MN : SN FullBeta (M.app N)) :
     SN FullBeta N := by
-  refine sn_MN.onFun_of_image (f := fun (N : Term Var) => M.app N) |>.subrelation ?_
+  refine sn_MN.onFun_of_image (f := M.app) |>.of_le fun _ _ => ?_
   exact Xi.appL lc_M
 
 /-- A neutral term is a term of the form v t₁ … t_n where
