@@ -28,13 +28,6 @@ open FullBeta Relation
 
 attribute [grind =] Finset.union_singleton
 
--- /-- A term is strongly normalizing if every reduction sequence terminates at some point.
---     This is ensured by the following type as inductive data must always be finite. -/
--- inductive SN {α} : Term α → Prop
--- | sn t : (∀ t', t ⭢βᶠ t' → SN t') → SN t
-
--- attribute [scoped grind .] SN.sn
-
 /-- A single β-reduction step preserves strong normalization. -/
 lemma sn_step (t_st_t' : t ⭢βᶠ t') (sn_t : SN FullBeta t) : SN FullBeta t' :=
   sn_t.of_rel t_st_t'
