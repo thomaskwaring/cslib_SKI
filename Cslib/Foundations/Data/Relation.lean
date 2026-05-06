@@ -220,9 +220,9 @@ lemma SN.of_rel_reflTransGen (hx : SN r x) (h : ReflTransGen r x y) : SN r y := 
   | tail _ h ih => exact ih.of_rel h
 
 lemma SN.transGen (hx : SN r x) : SN (TransGen r) x := by
-  suffices _ : (fun a b => TransGen r b a) = TransGen (Function.swap r) by
-    grind [Acc.transGen]
-  grind [transGen_swap]
+  have eq : TransGen (Function.swap r) = (fun a b => TransGen r b a) := by
+    ext
+  simpa [eq] using Acc.transGen hx
 
 lemma SN.subrelation {r' : α → α → Prop} (hx : SN r x) (h : Subrelation r' r) : SN r' x := by
   refine Subrelation.accessible ?_ hx
