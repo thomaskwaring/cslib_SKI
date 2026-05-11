@@ -134,3 +134,4 @@ public import Cslib.Logics.Modal.Cube
 public import Cslib.Logics.Modal.Denotation
 public import Cslib.Logics.Propositional.Defs
 public import Cslib.Logics.Propositional.NaturalDeduction.Basic
+public import Cslib.MachineLearning.PACLearning.Defs
