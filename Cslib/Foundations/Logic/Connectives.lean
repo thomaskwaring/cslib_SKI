@@ -9,6 +9,8 @@ module
 public import Cslib.Init
 public import Mathlib.Order.Notation
 
+/-! # Notation classes for logical connectives -/
+
 @[expose] public section
 
 namespace Cslib.Logic
@@ -42,7 +44,8 @@ class HasNot (α : Type*) where
 @[inherit_doc] scoped notation:max "¬" a:40 => HasNot.not a
 
 /-- Instantiate negation for types with implication and a bottom element. NB: this has a lower
-  instance priority to account for proposition types with inbuilt negation. -/
+  instance priority to account for proposition types with inbuilt negation. Possibly it should be
+  a `def` instead? -/
 instance (priority := 900) instNotImplBot (α : Type*) [HasImpl α] [Bot α] : HasNot α where
   not a := a → ⊥
 
