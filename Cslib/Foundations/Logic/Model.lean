@@ -165,6 +165,19 @@ theorem Theory.lindenbaum_complete [DecidableEq Atom] {T : Theory Atom} :
     IsCompleteModel (Proposition Atom) (HeytingModel Atom) T T.lindenbaum :=
   sorry -- also in a branch
 
+abbrev Valuation (Atom : Type*) := Atom → Prop
+
+def Valuation.interp (v : Valuation Atom) : Proposition Atom → Prop
+  | .atom x => v x
+  | .and A B => v.interp A ∧ v.interp B
+  | .or A B => v.interp A ∨ v.interp B
+  | .impl A B => v.interp A → v.interp B
+
+instance : InterpModels (Proposition Atom) (Valuation Atom) where
+  Ground _ := Prop
+  interp v A := v.interp A
+  filter _ := {True}
+
 end PL
 
 end Cslib.Logic
