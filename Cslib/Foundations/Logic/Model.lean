@@ -10,8 +10,24 @@ public import Cslib.Foundations.Logic.Connectives
 public import Cslib.Foundations.Logic.InferenceSystem
 public import Cslib.Logics.Modal.Basic
 public import Cslib.Logics.Propositional.NaturalDeduction.Basic
+public import Cslib.Logics.HML.Basic
 
-/-! # Semantics for logical systems -/
+/-! # Semantics for logical systems
+
+This file is a **draft** proposal for how CSLib might factor out useful semantic concepts across
+different logics, in order to share notation and basic results. Some concepts we aim to unify are:
+
+- A satisfaction relation: `Models α β` (resp. `ParamModels α β`) indicates that a "model" `M : β`
+carries a satisfaction relation `Satisfies : β → α → Prop` over the "proposition" type α (resp.
+a local `SatisfiesAt : (b : β) → (Param b) → α → Prop`). Examples are `Modal.Satisfies` and
+`HML.Satisfies`.
+- Soundness and completeness wrt an inference system.
+- The `theory` associated to a parameter, and the `logic` associated to a class of models. This
+captures `HML.theory`, `Modal.theory` and `Modal.logic`.
+
+Further developments could include relating different models of a given logic, models of
+higher-order logics (once they exist in CSLib), and ...
+-/
 
 public section
 
@@ -91,30 +107,26 @@ def ParamModels.theory {α β : Type*} [ParamModels α β] {M : β} (w : Param M
 
 def Models.logic {α β : Type*} [Models α β] (S : Set β) : Set α := {A | ∀ b ∈ S, ⊨[b] A}
 
-namespace Modal
-
 structure BundledModel (Atom : Type*) where
   World : Type*
-  model : Model World Atom
+  model : Modal.Model World Atom
 
-def Model.toBundledModel {World Atom : Type*} (M : Model World Atom) : BundledModel Atom :=
-  {World := World, model := M}
+def Modal.Model.toBundledModel {World Atom : Type*} (M : Modal.Model World Atom) :
+  BundledModel Atom := {World := World, model := M}
 
-instance {Atom : Type*} : ParamModels (Proposition Atom) (BundledModel Atom) where
+instance {Atom : Type*} : ParamModels (Modal.Proposition Atom) (BundledModel Atom) where
   Param M := M.World
-  SatisfiesAt M w A := Satisfies M.model w A
+  SatisfiesAt M w A := Modal.Satisfies M.model w A
 
-example {World Atom : Type*} (S : Set (Model World Atom)) :
-    logic S = Models.logic (Model.toBundledModel '' S) := by
+example {World Atom : Type*} (S : Set (Modal.Model World Atom)) :
+    Modal.logic S = Models.logic (Modal.Model.toBundledModel '' S) := by
   simp [Models.logic]
   rfl
 
-example {World Atom : Type*} (m : Model World Atom) (w : World) :
-    theory m w = ParamModels.theory (M := m.toBundledModel) w := by
+example {World Atom : Type*} (m : Modal.Model World Atom) (w : World) :
+    Modal.theory m w = ParamModels.theory (M := m.toBundledModel) w := by
   simp [theory, ParamModels.theory]
   rfl
-
-end Modal
 
 namespace PL
 
@@ -179,5 +191,16 @@ instance : InterpModels (Proposition Atom) (Valuation Atom) where
   filter _ := {True}
 
 end PL
+
+variable {State Label : Type*}
+
+instance : ParamModels (HML.Proposition Label) (LTS State Label) where
+  Param _ := State
+  SatisfiesAt := HML.Satisfies
+
+example (lts : LTS State Label) (s : State) :
+    HML.theory lts s = ParamModels.theory (M := lts) s := by
+  simp [theory, HML.theory]
+  rfl
 
 end Cslib.Logic
