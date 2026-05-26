@@ -114,6 +114,7 @@ structure BundledModel (Atom : Type*) where
 def Modal.Model.toBundledModel {World Atom : Type*} (M : Modal.Model World Atom) :
   BundledModel Atom := {World := World, model := M}
 
+/-- Instance using the bundled design. -/
 instance {Atom : Type*} : ParamModels (Modal.Proposition Atom) (BundledModel Atom) where
   Param M := M.World
   SatisfiesAt M w A := Modal.Satisfies M.model w A
@@ -124,9 +125,25 @@ example {World Atom : Type*} (S : Set (Modal.Model World Atom)) :
   rfl
 
 example {World Atom : Type*} (m : Modal.Model World Atom) (w : World) :
-    Modal.theory m w = ParamModels.theory (M := m.toBundledModel) w := by
-  simp [theory, ParamModels.theory]
+    Modal.theory m w = ParamModels.theory (M := m.toBundledModel) w := rfl
+
+/-- Instance for "local forcing" (ie at the specific world) using unbundled design. -/
+instance {Atom World : Type*} :
+    Models (Modal.Proposition Atom) (Modal.Model World Atom × World) where
+  Satisfies M A := Modal.Satisfies M.1 M.2 A
+
+/-- Global forcing in the unbundled design. -/
+instance {Atom World : Type*} :
+    Models (Modal.Proposition Atom) (Modal.Model World Atom) where
+  Satisfies M A := ∀ w : World, Modal.Satisfies M w A
+
+example {World Atom : Type*} (M : Modal.Model World Atom) (w : World) :
+    Modal.theory M w = Models.logic {(M, w)} := by
+  simp [Modal.theory, logic]
   rfl
+
+example {World Atom : Type*} (S : Set (Modal.Model World Atom)) :
+    Modal.logic S = Models.logic S := rfl
 
 namespace PL
 
