@@ -352,269 +352,53 @@ example `Bisimulation.deterministic_trace_eq_is_bisim`). -/
 theorem IsBisimulation.traceEq_not_bisim :
     ∃ (State : Type) (Label : Type) (lts : LTS State Label),
       ¬(IsHomBisimulation lts (HomTraceEq lts)) := by
-  exists ℕ
-  exists Char
   let lts := LTS.mk BisimMotTr
-  exists lts
+  exists ℕ, Char, lts
   intro h
-  -- specialize h 1 5
   have htreq : (1 ~tr[lts] 5) := by
-    simp [TraceEq]
     have htraces₁ : lts.traces 1 = {[], ['a'], ['a', 'b'], ['a', 'c']} := by
-      apply Set.ext_iff.2
-      intro μs
-      apply Iff.intro
+      ext μs
+      constructor
       case mp =>
-        intro h1
-        obtain ⟨s', htr⟩ := h1
-        cases htr
-        case refl =>
-          simp
-        case stepL μ sb μs' htr hmtr =>
-          cases htr
-          cases hmtr
-          case one2two.stepL μ sb μs' htr hmtr =>
-            cases htr <;> cases hmtr <;>
-            simp only [↓Char.isValue, Set.mem_insert_iff, reduceCtorEq, List.cons.injEq,
-              List.cons_ne_self, and_false, Set.mem_singleton_iff, Char.reduceEq, and_true,
-              or_false, or_true] <;>
-            contradiction
-          simp
+        rintro ⟨_, (_ | ⟨⟨_⟩, (_ | ⟨(_ | _), (_ | ⟨⟨_⟩, _⟩)⟩)⟩)⟩
+        all_goals simp
       case mpr =>
-        intro h1
-        cases h1
-        case inl h1 =>
-          simp only [h1]
-          exists 1
-          constructor
-        case inr h1 =>
-          cases h1
-          case inl h1 =>
-            simp only [h1]
-            exists 2
-            apply MTr.single; constructor
-          case inr h1 =>
-            cases h1
-            case inl h1 =>
-              simp only [h1]
-              exists 3
-              constructor
-              · apply BisimMotTr.one2two
-              · apply MTr.single
-                apply BisimMotTr.two2three
-            case inr h1 =>
-              cases h1
-              exists 4
-              constructor
-              · apply BisimMotTr.one2two
-              · apply MTr.single
-                apply BisimMotTr.two2four
-    have htraces₂ : lts.traces 5 = {[], ['a'], ['a', 'b'], ['a', 'c']} := by
-      apply Set.ext_iff.2
-      intro μs
-      apply Iff.intro
+        rintro (rfl | rfl | rfl | rfl)
+        · exact ⟨1, .refl⟩
+        · exact ⟨2, MTr.single lts .one2two⟩
+        · exact ⟨3, MTr.stepL .one2two <| MTr.single lts .two2three⟩
+        · exact ⟨4, MTr.stepL .one2two <| MTr.single lts .two2four⟩
+    have htraces₅ : lts.traces 5 = {[], ['a'], ['a', 'b'], ['a', 'c']} := by
+      ext μs
+      constructor
       case mp =>
-        intro h1
-        obtain ⟨s', htr⟩ := h1
-        cases htr
-        case refl =>
-          simp
-        case stepL μ sb μs' htr hmtr =>
-          cases htr
-          case five2six =>
-            cases hmtr
-            case refl =>
-              simp
-            case stepL μ sb μs' htr hmtr =>
-              cases htr
-              cases hmtr
-              case refl => simp
-              case stepL μ sb μs' htr hmtr =>
-                cases htr
-          case five2eight =>
-            cases hmtr
-            case refl =>
-              simp
-            case stepL μ sb μs' htr hmtr =>
-              cases htr
-              cases hmtr
-              case refl => right; right; simp
-              case stepL μ sb μs' htr hmtr =>
-                cases htr
+        rintro ⟨_, (_ | ⟨(_ | _), (_ | ⟨⟨_⟩, (_ | ⟨⟨_⟩, _⟩)⟩)⟩)⟩
+        all_goals simp
       case mpr =>
-        intro h1
-        cases h1
-        case inl h1 =>
-          simp only [h1]
-          exists 5
-          constructor
-        case inr h1 =>
-          cases h1
-          case inl h1 =>
-            simp only [h1]
-            exists 6
-            apply MTr.single; constructor
-          case inr h1 =>
-            cases h1
-            case inl h1 =>
-              simp only [h1]
-              exists 7
-              constructor
-              · apply BisimMotTr.five2six
-              · apply MTr.single
-                apply BisimMotTr.six2seven
-            case inr h1 =>
-              cases h1
-              exists 9
-              constructor
-              · apply BisimMotTr.five2eight
-              · apply MTr.single;
-                apply BisimMotTr.eight2nine
-    simp [htraces₁, htraces₂]
-  specialize h htreq
-  specialize h 'a'
-  obtain ⟨h1, h2⟩ := h
-  specialize h1 2 (by constructor)
-  obtain ⟨s₂', htr5, cih⟩ := h1
+        rintro (rfl | rfl | rfl | rfl)
+        · exact ⟨5, .refl⟩
+        · exact ⟨6, MTr.single lts .five2six⟩
+        · exact ⟨7, MTr.stepL .five2six <| MTr.single lts .six2seven⟩
+        · exact ⟨9, MTr.stepL .five2eight <| MTr.single lts .eight2nine⟩
+    exact htraces₁.trans htraces₅.symm
+  obtain ⟨h1, h2⟩ := h htreq 'a'
+  obtain ⟨s₂', htr5, cih⟩ := h1 2 (by constructor)
+  have htraces₂ : {['b'], ['c']} ⊆ lts.traces 2 := by
+    intro μs h
+    rcases h with (rfl | rfl)
+    · exists 3; constructor; constructor; constructor
+    · exists 4; constructor; constructor; constructor
   cases htr5
   case five2six =>
-    simp [TraceEq] at cih
-    have htraces₂ : lts.traces 2 = {[], ['b'], ['c']} := by
-      apply Set.ext_iff.2
-      intro μs
-      apply Iff.intro
-      case mp =>
-        intro h
-        obtain ⟨s', htr⟩ := h
-        cases htr
-        case refl => simp
-        case stepL μ sb μs' htr hmtr =>
-          cases htr
-          case two2three =>
-            cases hmtr
-            case stepL μ sb μs' htr hmtr => cases htr
-            simp
-          case two2four =>
-            cases hmtr
-            case refl => simp
-            case stepL μ sb μs' htr hmtr =>
-              cases htr
-      case mpr =>
-        intro h
-        cases h
-        case inl h =>
-          exists 2
-          simp [h]
-          constructor
-        case inr h =>
-          cases h
-          case inl h =>
-            exists 3; simp [h]; constructor; constructor; constructor
-          case inr h =>
-            exists 4
-            simp at h
-            simp [h]
-            constructor; constructor; constructor
-    have htraces6 : lts.traces 6 = {[], ['b']} := by
-      apply Set.ext_iff.2
-      intro μs
-      apply Iff.intro
-      case mp =>
-        intro h
-        obtain ⟨s', htr⟩ := h
-        cases htr
-        case refl => simp
-        case stepL μ sb μs' htr hmtr =>
-          cases htr
-          cases hmtr
-          case stepL μ sb μs' htr hmtr => cases htr
-          simp
-      case mpr =>
-        intro h
-        cases h
-        case inl h =>
-          exists 6
-          simp [h]
-          constructor
-        case inr h =>
-          exists 7
-          simp at h
-          simp [h]
-          constructor; constructor; constructor
-    grind
+    suffices ['c'] ∉ lts.traces 6 by grind [TraceEq]
+    intro ⟨_, h⟩
+    cases h
+    case stepL h _ => cases h
   case five2eight =>
-    simp only [TraceEq] at cih
-    have htraces₂ : lts.traces 2 = {[], ['b'], ['c']} := by
-      apply Set.ext_iff.2
-      intro μs
-      apply Iff.intro
-      case mp =>
-        intro h
-        obtain ⟨s', htr⟩ := h
-        cases htr
-        case refl => simp
-        case stepL μ sb μs' htr hmtr =>
-          cases htr
-          case two2three =>
-            cases hmtr
-            case stepL μ sb μs' htr hmtr => cases htr
-            simp
-          case two2four =>
-            cases hmtr
-            case refl => simp
-            case stepL μ sb μs' htr hmtr =>
-              cases htr
-      case mpr =>
-        intro h
-        cases h
-        case inl h =>
-          exists 2
-          simp [h]
-          constructor
-        case inr h =>
-          cases h
-          case inl h =>
-            exists 3; simp [h]; constructor; constructor; constructor
-          case inr h =>
-            exists 4
-            simp at h
-            simp [h]
-            constructor; constructor; constructor
-    have htraces8 : lts.traces 8 = {[], ['c']} := by
-      apply Set.ext_iff.2
-      intro μs
-      apply Iff.intro
-      case mp =>
-        intro h
-        obtain ⟨s', htr⟩ := h
-        cases htr
-        case refl => simp
-        case stepL μ sb μs' htr hmtr =>
-          cases htr
-          cases hmtr
-          case stepL μ sb μs' htr hmtr => cases htr
-          simp
-      case mpr =>
-        intro h
-        cases h
-        case inl h =>
-          exists 8
-          simp [h]
-          constructor
-        case inr h =>
-          exists 9
-          simp at h
-          simp [h]
-          repeat constructor
-    rw [htraces₂, htraces8] at cih
-    apply Set.ext_iff.1 at cih
-    specialize cih ['b']
-    obtain ⟨cih1, cih2⟩ := cih
-    have cih1h : ['b'] ∈ @insert
-      (List Char) (Set (List Char)) Set.instInsert [] {['b'], ['c']} := by
-      simp
-    specialize cih1 cih1h
-    simp at cih1
+    suffices ['b'] ∉ lts.traces 8 by grind [TraceEq]
+    intro ⟨_, h⟩
+    cases h
+    case stepL h _ => cases h
 
 /-- In general, bisimilarity and trace equivalence are distinct. -/
 theorem Bisimilarity.bisimilarity_neq_traceEq :
@@ -622,11 +406,7 @@ theorem Bisimilarity.bisimilarity_neq_traceEq :
       HomBisimilarity lts ≠ HomTraceEq lts := by
   obtain ⟨State, Label, lts, h⟩ := IsBisimulation.traceEq_not_bisim
   use State, Label, lts
-  intro heq
-  have hb := Bisimilarity.isBisimulation lts lts
-  simp only [HomBisimilarity] at heq
-  rw [heq] at hb
-  contradiction
+  grind [Bisimilarity.isBisimulation lts lts]
 
 /-- In any deterministic LTS, trace equivalence is a bisimulation. -/
 theorem IsBisimulation.deterministic_traceEq_isBisimulation
