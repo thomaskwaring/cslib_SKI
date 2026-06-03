@@ -51,7 +51,7 @@ we prove to be sound and complete.
 - `LTS.IsBisimulation.inv`: the inverse of a bisimulation is a bisimulation.
 - `Bisimilarity.eqv`: bisimilarity is an equivalence relation (see `Equivalence`).
 - `Bisimilarity.isBisimulation`: bisimilarity is itself a bisimulation.
-- `Bisimilarity.le_bisimilarity_of_isBisimulation`: bisimilarity is the largest bisimulation.
+- `IsBisimulation.le_bisimilarity`: bisimilarity is the largest bisimulation.
 - `Bisimilarity.gfp`: the union of bisimilarity and any bisimulation is equal to bisimilarity.
 - `LTS.IsBisimulationUpTo.isBisimulation`: any bisimulation up to bisimilarity is a bisimulation.
 - `LTS.IsBisimulation.traceEq`: any bisimulation that relates two states implies that they are
