@@ -7,7 +7,6 @@ Authors: Fabrizio Montesi
 module
 
 public import Cslib.Foundations.Data.Relation
-public import Cslib.Foundations.Semantics.LTS.HasTau
 public import Cslib.Foundations.Semantics.LTS.Simulation
 public import Cslib.Foundations.Semantics.LTS.TraceEq
 
@@ -715,47 +714,22 @@ def IsSWBisimulation [HasTau Label] (lts₁ : LTS State₁ Label) (lts₂ : LTS 
     (∀ s₂', lts₂.Tr s₂ μ s₂' → ∃ s₁', lts₁.STr s₁ μ s₁' ∧ r s₁' s₂')
   )
 
-/-- Utility theorem for 'following' internal transitions using an `SWBisimulation`
-(first component). -/
-theorem IsSWBisimulation.follow_internal_fst
-    [HasTau Label] {lts₁ : LTS State₁ Label} {lts₂ : LTS State₂ Label}
-    (hswb : IsSWBisimulation lts₁ lts₂ r) (hr : r s₁ s₂) (hstr : lts₁.τSTr s₁ s₁') :
-    ∃ s₂', lts₂.τSTr s₂ s₂' ∧ r s₁' s₂' := by
-  induction hstr
-  case refl =>
-    exists s₂
-    constructor; constructor
-    exact hr
-  case tail sb hrsb htrsb ih1 ih2 =>
-    obtain ⟨sb2, htrsb2, hrb⟩ := ih2
-    have h := (hswb hrb HasTau.τ).left _ ih1
-    obtain ⟨sb2', htrsb2', hrb'⟩ := h
-    exists sb2'
-    constructor
-    · simp only [sTr_τSTr] at htrsb htrsb2'
-      exact Relation.ReflTransGen.trans htrsb2 htrsb2'
-    · exact hrb'
+lemma IsSWBisimulation.isSimulation [HasTau Label] (h : IsSWBisimulation lts₁ lts₂ r) :
+    IsSimulation lts₁ lts₂.saturate r := by
+  intro s₁ s₂ hr μ
+  exact (h hr μ).1
 
-/-- Utility theorem for 'following' internal transitions using an `SWBisimulation`
-(second component). -/
-theorem IsSWBisimulation.follow_internal_snd
-    [HasTau Label] {lts₁ : LTS State₁ Label} {lts₂ : LTS State₂ Label}
-    (hswb : IsSWBisimulation lts₁ lts₂ r) (hr : r s₁ s₂) (hstr : lts₂.τSTr s₂ s₂') :
-    ∃ s₁', lts₁.τSTr s₁ s₁' ∧ r s₁' s₂' := by
-  induction hstr
-  case refl =>
-    exists s₁
-    constructor; constructor
-    exact hr
-  case tail sb hrsb htrsb ih1 ih2 =>
-    obtain ⟨sb2, htrsb2, hrb⟩ := ih2
-    have h := (hswb hrb HasTau.τ).right _ ih1
-    obtain ⟨sb2', htrsb2', hrb'⟩ := h
-    exists sb2'
-    constructor
-    · simp only [sTr_τSTr] at htrsb htrsb2'
-      exact Relation.ReflTransGen.trans htrsb2 htrsb2'
-    · exact hrb'
+lemma IsSWBisimulation.isSimulation_flip [HasTau Label] (h : IsSWBisimulation lts₁ lts₂ r) :
+    IsSimulation lts₂ lts₁.saturate (flip r) := by
+  intro s₂ s₁ hr μ
+  exact (h hr μ).2
+
+lemma IsSWBisimulation.iff_isSimulation [HasTau Label] :
+    IsSWBisimulation lts₁ lts₂ r ↔
+      IsSimulation lts₁ lts₂.saturate r ∧ IsSimulation lts₂ lts₁.saturate (flip r) := by
+  refine ⟨fun h => ⟨h.isSimulation, h.isSimulation_flip⟩, ?_⟩
+  intro ⟨h, hflip⟩ s₁ s₂ hr μ
+  exact ⟨h s₁ s₂ hr μ, hflip s₂ s₁ hr μ⟩
 
 /-- We can now prove that any relation is a `WeakBisimulation` iff it is an `SWBisimulation`.
 This formalises lemma 4.2.10 in [Sangiorgi2011]. -/
@@ -764,59 +738,15 @@ theorem isWeakBisimulation_iff_isSWBisimulation
     IsWeakBisimulation lts₁ lts₂ r ↔ IsSWBisimulation lts₁ lts₂ r := by
   apply Iff.intro
   case mp =>
-    intro h s₁ s₂ hr μ
-    apply And.intro
-    case left =>
-      intro s₁' htr
-      specialize h hr μ
-      have h' := h.1 s₁' (STr.single lts₁ htr)
-      obtain ⟨s₂', htr2, hr2⟩ := h'
-      exists s₂'
-    case right =>
-      intro s₂' htr
-      specialize h hr μ
-      have h' := h.2 s₂' (STr.single lts₂ htr)
-      obtain ⟨s₁', htr1, hr1⟩ := h'
-      exists s₁'
+    intro h
+    rw [IsSWBisimulation.iff_isSimulation]
+    exact ⟨h.isSimulation.mono lts₁.tr_le_tr_saturate le_rfl,
+      h.inv.isSimulation.mono lts₂.tr_le_tr_saturate le_rfl⟩
   case mpr =>
-    intro h s₁ s₂ hr μ
-    apply And.intro
-    case left =>
-      intro s₁' hstr
-      cases hstr
-      case refl =>
-        exists s₂
-        constructor; constructor
-        exact hr
-      case tr sb sb' hstr1 htr hstr2 =>
-        rw [←sTr_τSTr] at hstr1 hstr2
-        simp only [sTr_τSTr] at hstr1 hstr2
-        obtain ⟨sb1, hstr1b, hrb⟩ := IsSWBisimulation.follow_internal_fst h hr hstr1
-        obtain ⟨sb2', hstr1b', hrb'⟩ := (h hrb μ).left _ htr
-        obtain ⟨s₁', hstr1', hrb2⟩ := IsSWBisimulation.follow_internal_fst h hrb' hstr2
-        rw [←sTr_τSTr] at hstr1' hstr1b
-        exists s₁'
-        constructor
-        · exact STr.comp lts₂ hstr1b hstr1b' hstr1'
-        · exact hrb2
-    case right =>
-      intro s₂' hstr
-      cases hstr
-      case refl =>
-        exists s₁
-        constructor; constructor
-        exact hr
-      case tr sb sb' hstr1 htr hstr2 =>
-        rw [←sTr_τSTr] at hstr1 hstr2
-        simp only [sTr_τSTr] at hstr1 hstr2
-        obtain ⟨sb1, hstr1b, hrb⟩ := IsSWBisimulation.follow_internal_snd h hr hstr1
-        obtain ⟨sb2', hstr1b', hrb'⟩ := (h hrb μ).right _ htr
-        obtain ⟨s₁', hstr1', hrb2⟩ := IsSWBisimulation.follow_internal_snd h hrb' hstr2
-        rw [←sTr_τSTr] at hstr1' hstr1b
-        exists s₁'
-        constructor
-        · exact STr.comp lts₁ hstr1b hstr1b' hstr1'
-        · exact hrb2
+    intro h
+    rw [IsWeakBisimulation, IsBisimulation.isSimulation_iff]
+    exact ⟨h.isSimulation.isSimulation_saturate_left,
+      h.isSimulation_flip.isSimulation_saturate_left⟩
 
 theorem IsWeakBisimulation.isSwBisimulation
     [HasTau Label] {lts₁ : LTS State₁ Label} {lts₂ : LTS State₂ Label} {r : State₁ → State₂ → Prop}
