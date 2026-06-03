@@ -213,7 +213,7 @@ theorem bisimilarity_choice_comm : (choice p q) ~[lts (defs := defs)] (choice q 
         cases htr with grind
       · grind [HomBisimilarity.refl, ChoiceComm]
   case bisim h =>
-    grind [ChoiceComm]
+    grind [IsBisimulation, ChoiceComm]
 
 private inductive ChoiceAssoc : Process Name Constant → Process Name Constant → Prop where
   | assoc : ChoiceAssoc (choice p (choice q r)) (choice (choice p q) r)
@@ -262,7 +262,7 @@ theorem bisimilarity_congr_pre :
   case pre p' q' μ hbis =>
     unfold lts
     constructor <;> intro _ _ <;> [exists q'; exists p'] <;> grind
-  case bisim => grind [IsBisimulation.le_bisimilarity]
+  case bisim => grind [IsBisimulation, IsBisimulation.le_bisimilarity]
 
 @[local grind]
 private inductive ResBisim : Process Name Constant → Process Name Constant → Prop where

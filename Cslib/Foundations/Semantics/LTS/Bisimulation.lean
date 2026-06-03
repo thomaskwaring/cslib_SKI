@@ -75,7 +75,6 @@ section Bisimulation
 /-- A relation is a bisimulation if, whenever it relates two states,
 the transitions originating from these states mimic each other and the reached
 derivatives are themselves related. -/
-@[scoped grind =]
 def IsBisimulation (lts₁ : LTS State₁ Label) (lts₂ : LTS State₂ Label)
     (r : State₁ → State₂ → Prop) : Prop :=
   ∀ ⦃s₁ s₂⦄, r s₁ s₂ → ∀ μ, (
@@ -83,21 +82,6 @@ def IsBisimulation (lts₁ : LTS State₁ Label) (lts₂ : LTS State₂ Label)
     ∧
     (∀ s₂', lts₂.Tr s₂ μ s₂' → ∃ s₁', lts₁.Tr s₁ μ s₁' ∧ r s₁' s₂')
   )
-
-/-! ## Relation to simulation -/
-
-/-- Any bisimulation is also a simulation. -/
-theorem IsBisimulation.isSimulation : IsBisimulation lts₁ lts₂ r → IsSimulation lts₁ lts₂ r := by
-  grind [IsSimulation]
-
-/-- A relation is a bisimulation iff both it and its inverse are simulations. -/
-theorem IsBisimulation.isSimulation_iff :
-    IsBisimulation lts₁ lts₂ r ↔ (IsSimulation lts₁ lts₂ r ∧ IsSimulation lts₂ lts₁ (flip r)) := by
-  have _ (s₁ s₂) : r s₁ s₂ → flip r s₂ s₁ := id
-  grind [IsSimulation, flip]
-
-/-- A homogeneous bisimulation is a bisimulation where the underlying LTSs are the same. -/
-abbrev IsHomBisimulation (lts : LTS State Label) := IsBisimulation lts lts
 
 /-- Helper for following a transition by the first state in a pair of a `Bisimulation`. -/
 theorem IsBisimulation.follow_fst
@@ -110,6 +94,21 @@ theorem IsBisimulation.follow_snd
     (hb : IsBisimulation lts₁ lts₂ r) (hr : r s₁ s₂) (htr : lts₂.Tr s₂ μ s₂') :
     ∃ s₁', lts₁.Tr s₁ μ s₁' ∧ r s₁' s₂' :=
   (hb hr μ).2 _ htr
+
+/-! ## Relation to simulation -/
+
+/-- Any bisimulation is also a simulation. -/
+theorem IsBisimulation.isSimulation : IsBisimulation lts₁ lts₂ r → IsSimulation lts₁ lts₂ r := by
+  grind [IsBisimulation, IsSimulation]
+
+/-- A relation is a bisimulation iff both it and its inverse are simulations. -/
+theorem IsBisimulation.isSimulation_iff :
+    IsBisimulation lts₁ lts₂ r ↔ (IsSimulation lts₁ lts₂ r ∧ IsSimulation lts₂ lts₁ (flip r)) := by
+  have _ (s₁ s₂) : r s₁ s₂ → flip r s₂ s₁ := id
+  grind [IsBisimulation, IsSimulation, flip]
+
+/-- A homogeneous bisimulation is a bisimulation where the underlying LTSs are the same. -/
+abbrev IsHomBisimulation (lts : LTS State Label) := IsBisimulation lts lts
 
 /-- Two states are bisimilar if they are related by some bisimulation. -/
 @[scoped grind =]
@@ -132,22 +131,22 @@ scoped notation s:max " ~[" lts "] " s':max => HomBisimilarity lts s s'
 
 /-- Helper for following a transition by the first state in a pair of a `Bisimilarity`. -/
 theorem Bisimilarity.follow_fst (hr : s₁ ~[lts₁,lts₂] s₂) (htr : lts₁.Tr s₁ μ s₁') :
-    ∃ s₂', lts₂.Tr s₂ μ s₂' ∧ s₁' ~[lts₁,lts₂ ] s₂' := by grind
+    ∃ s₂', lts₂.Tr s₂ μ s₂' ∧ s₁' ~[lts₁,lts₂ ] s₂' := by grind [IsBisimulation]
 
 /-- Helper for following a transition by the first state in a pair of a `Bisimilarity`. -/
 theorem Bisimilarity.follow_snd (hr : s₁ ~[lts₁,lts₂] s₂) (htr : lts₂.Tr s₂ μ s₂') :
-    ∃ s₁', lts₁.Tr s₁ μ s₁' ∧ s₁' ~[lts₁,lts₂] s₂' := by grind
+    ∃ s₁', lts₁.Tr s₁ μ s₁' ∧ s₁' ~[lts₁,lts₂] s₂' := by grind [IsBisimulation]
 
 /-- Homogeneous bisimilarity is reflexive. -/
 @[scoped grind ., refl]
 theorem HomBisimilarity.refl (s : State) : s ~[lts] s := by
   exists Eq
-  grind
+  grind [IsBisimulation]
 
 /-- The inverse of a bisimulation is a bisimulation. -/
 @[scoped grind →]
 theorem IsBisimulation.inv (h : IsBisimulation lts₁ lts₂ r) :
-  IsBisimulation lts₂ lts₁ (flip r) := by grind [flip]
+  IsBisimulation lts₂ lts₁ (flip r) := by grind [IsBisimulation, flip]
 
 open scoped IsBisimulation in
 /-- Bisimilarity is symmetric. -/
@@ -160,7 +159,7 @@ theorem Bisimilarity.symm {lts₁ lts₂ : LTS State Label} {s₁ s₂ : State}
 @[scoped grind .]
 theorem IsBisimulation.comp
     (h1 : IsBisimulation lts₁ lts₂ r1) (h2 : IsBisimulation lts₂ lts₃ r2) :
-  IsBisimulation lts₁ lts₃ (Relation.Comp r1 r2) := by grind [Relation.Comp]
+  IsBisimulation lts₁ lts₃ (Relation.Comp r1 r2) := by grind [IsBisimulation, Relation.Comp]
 
 /-- Bisimilarity is transitive. -/
 @[scoped grind →]
@@ -170,7 +169,7 @@ theorem Bisimilarity.trans
   obtain ⟨r1, _, _⟩ := h1
   obtain ⟨r2, _, _⟩ := h2
   exists Relation.Comp r1 r2
-  grind [Relation.Comp]
+  grind [IsBisimulation, Relation.Comp]
 
 /-- Homogeneous bisimilarity is an equivalence relation. -/
 theorem HomBisimilarity.eqv :
@@ -196,7 +195,7 @@ theorem IsBisimulation.sup (hrb : IsBisimulation lts₁ lts₂ r) (hsb : IsBisim
 /-- Bisimilarity is a bisimulation. -/
 @[scoped grind .]
 theorem Bisimilarity.isBisimulation (lts₁ : LTS State₁ Label) (lts₂ : LTS State₂ Label) :
-  IsBisimulation lts₁ lts₂ (Bisimilarity lts₁ lts₂) := by grind
+  IsBisimulation lts₁ lts₂ (Bisimilarity lts₁ lts₂) := by grind [IsBisimulation]
 
 /-- Bisimilarity is the largest bisimulation. -/
 @[scoped grind →]
@@ -266,7 +265,6 @@ def UpToHomBisimilarity (lts₁ : LTS State₁ Label) (lts₂ : LTS State₂ Lab
 /-- A relation `r` is a bisimulation up to homogeneous bisimilarity if, whenever it relates two
 states in an lts, the transitions originating from these states mimic each other and the reached
 derivatives are themselves related by `r` up to bisimilarity. -/
-@[scoped grind]
 def IsBisimulationUpTo (lts₁ : LTS State₁ Label) (lts₂ : LTS State₂ Label)
     (r : State₁ → State₂ → Prop) : Prop :=
   ∀ ⦃s₁ s₂⦄, r s₁ s₂ → ∀ μ, (
