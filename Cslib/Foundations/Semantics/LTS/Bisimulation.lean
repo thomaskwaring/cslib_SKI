@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2025 Fabrizio Montesi. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Fabrizio Montesi
+Authors: Fabrizio Montesi, Thomas Waring
 -/
 
 module
@@ -386,19 +386,17 @@ theorem IsBisimulation.traceEq_not_bisim :
   have htraces₂ : {['b'], ['c']} ⊆ lts.traces 2 := by
     intro μs h
     rcases h with (rfl | rfl)
-    · exists 3; constructor; constructor; constructor
-    · exists 4; constructor; constructor; constructor
+    · refine ⟨3, MTr.single lts .two2three⟩
+    · refine ⟨4, MTr.single lts .two2four⟩
   cases htr5
   case five2six =>
     suffices ['c'] ∉ lts.traces 6 by grind [TraceEq]
-    intro ⟨_, h⟩
+    rintro ⟨_, (_ | h)⟩
     cases h
-    case stepL h _ => cases h
   case five2eight =>
     suffices ['b'] ∉ lts.traces 8 by grind [TraceEq]
-    intro ⟨_, h⟩
+    rintro ⟨_, (_ | h)⟩
     cases h
-    case stepL h _ => cases h
 
 /-- In general, bisimilarity and trace equivalence are distinct. -/
 theorem Bisimilarity.bisimilarity_neq_traceEq :
