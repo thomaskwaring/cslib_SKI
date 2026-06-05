@@ -183,6 +183,10 @@ instance : IsEquiv State (HomBisimilarity lts) where
   symm _ _ := Bisimilarity.symm
   trans _ _ _ := Bisimilarity.trans
 
+/-- Bisimulation implies simulation equivalence. -/
+theorem IsBisimulation.simulationEquiv (h : IsBisimulation lts₁ lts₂ r) (hrel : r s₁ s₂) :
+    s₁ ≤≥[lts₁,lts₂] s₂ := ⟨⟨r, hrel, h.isSimulation⟩, flip r, hrel, h.inv.isSimulation⟩
+
 /-- The union of two bisimulations is a bisimulation. -/
 @[scoped grind .]
 theorem IsBisimulation.sup (hrb : IsBisimulation lts₁ lts₂ r) (hsb : IsBisimulation lts₁ lts₂ s) :
@@ -302,8 +306,7 @@ theorem IsBisimulationUpTo.isBisimulation (h : IsBisimulationUpTo lts₁ lts₂ 
 
 /-- If two states are related by a bisimulation, they can mimic each other's multi-step
 transitions. -/
-theorem IsBisimulation.bisim_trace
-    (hb : IsBisimulation lts₁ lts₂ r) (hr : r s₁ s₂) :
+theorem IsBisimulation.bisim_trace (hb : IsBisimulation lts₁ lts₂ r) (hr : r s₁ s₂) :
     ∀ μs s₁', lts₁.MTr s₁ μs s₁' → ∃ s₂', lts₂.MTr s₂ μs s₂' ∧ r s₁' s₂' :=
   hb.isSimulation.sim_trace hr
 
@@ -311,21 +314,8 @@ theorem IsBisimulation.bisim_trace
 
 /-- Any bisimulation implies trace equivalence. -/
 @[scoped grind =>]
-theorem IsBisimulation.traceEq
-    (hb : IsBisimulation lts₁ lts₂ r) (hr : r s₁ s₂) :
-    s₁ ~tr[lts₁,lts₂] s₂ := by
-  ext μs
-  constructor
-  case mp =>
-    intro h
-    obtain ⟨s₁', h⟩ := h
-    obtain ⟨s₂', hmtr⟩ := IsBisimulation.bisim_trace hb hr μs s₁' h
-    use s₂', hmtr.1
-  case mpr =>
-    intro h
-    obtain ⟨s₂', h⟩ := h
-    obtain ⟨s₁', hmtr⟩ := IsBisimulation.bisim_trace hb.inv hr μs s₂' h
-    use s₁', hmtr.1
+theorem IsBisimulation.traceEq (hb : IsBisimulation lts₁ lts₂ r) (hr : r s₁ s₂) :
+    s₁ ~tr[lts₁,lts₂] s₂ := (hb.simulationEquiv hr).traceEq
 
 /-- Bisimilarity is included in trace equivalence. -/
 @[scoped grind .]
