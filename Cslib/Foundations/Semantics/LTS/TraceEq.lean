@@ -104,24 +104,19 @@ abbrev HomTraceEq (lts : LTS State Label) := TraceEq lts lts
 scoped notation s:max " ~tr[" lts "] " s':max => HomTraceEq lts s s'
 
 /-- Homogeneous trace equivalence is reflexive. -/
-theorem HomTraceEq.refl (s : State) : s ~tr[lts] s := by
-  simp only [TraceEq]
-
-/-- Trace equivalence is symmetric. -/
-theorem TraceEq.symm (h : s₁ ~tr[lts₁,lts₂] s₂) : s₂ ~tr[lts₂,lts₁] s₁ := by
-  simp only [TraceEq] at h
-  simp only [TraceEq]
-  rw [h]
+@[refl] theorem HomTraceEq.refl (s : State) : s ~tr[lts] s := rfl
 
 @[simp] theorem TraceEq.flip_eq : flip (TraceEq lts₁ lts₂) = TraceEq lts₂ lts₁ := by
   ext s₁ s₂
-  grind [flip, TraceEq.symm]
+  grind [flip, TraceEq]
+
+/-- Trace equivalence is symmetric. -/
+theorem TraceEq.symm (h : s₁ ~tr[lts₁,lts₂] s₂) : s₂ ~tr[lts₂,lts₁] s₁ := by
+  rwa [←flip_eq]
 
 /-- Trace equivalence is transitive. -/
 theorem TraceEq.trans (h1 : s₁ ~tr[lts₁,lts₂] s₂) (h2 : s₂ ~tr[lts₂,lts₃] s₃) :
-    s₁ ~tr[lts₁,lts₃] s₃ := by
-  simp only [TraceEq] at *
-  rw [h1, h2]
+    s₁ ~tr[lts₁,lts₃] s₃ := Eq.trans h1 h2
 
 /-- Homogeneous trace equivalence is an equivalence relation. -/
 theorem HomTraceEq.eqv : Equivalence (· ~tr[lts] ·) where
@@ -160,5 +155,12 @@ theorem TraceEq.deterministic_isSimulation {lts₁ : LTS State₁ Label} {lts₂
 theorem SimulationEquiv.traceEq (h : s₁ ≤≥[lts₁,lts₂] s₂) : s₁ ~tr[lts₁,lts₂] s₂ := by
   obtain ⟨⟨_, h, hr⟩, _, h', hr'⟩ := h
   exact (hr.traces_subset h).antisymm (hr'.traces_subset h')
+
+theorem traceEq_iff_simulationEquiv_of_deterministic {lts₁ : LTS State₁ Label}
+    {lts₂ : LTS State₂ Label} [hdet₁ : lts₁.Deterministic] [hdet₂ : lts₂.Deterministic]
+    (s₁ : State₁) (s₂ : State₂) : (s₁ ~tr[lts₁,lts₂] s₂) ↔ s₁ ≤≥[lts₁,lts₂] s₂ :=
+  ⟨fun h =>
+    ⟨⟨_, h, TraceEq.deterministic_isSimulation⟩, _, h.symm, TraceEq.deterministic_isSimulation⟩,
+    SimulationEquiv.traceEq⟩
 
 end Cslib.LTS
