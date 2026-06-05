@@ -143,7 +143,7 @@ theorem MTr.nil_eq (h : lts.MTr s1 [] s2) : s1 = s2 := by
   cases h
   rfl
 
-theorem MTr.split (h : lts.MTr s1 (μs ++ μs') s2) :
+theorem MTr.split {lts : LTS State Label} (h : lts.MTr s1 (μs ++ μs') s2) :
     ∃ s, lts.MTr s1 μs s ∧ lts.MTr s μs' s2 := by
   induction μs generalizing s1 s2 with
   | nil => use s1, .refl, h
@@ -155,7 +155,7 @@ theorem MTr.split (h : lts.MTr s1 (μs ++ μs') s2) :
       use s', .stepL htr hmtr', hmtr''
 
 theorem MTr.append_iff : lts.MTr s1 (μs ++ μs') s2 ↔ ∃ s, lts.MTr s1 μs s ∧ lts.MTr s μs' s2 := by
-  refine ⟨MTr.split lts, ?_⟩
+  refine ⟨MTr.split, ?_⟩
   intro ⟨_, h, h'⟩
   exact h.comp lts h'
 
