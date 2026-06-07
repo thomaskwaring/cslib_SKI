@@ -311,9 +311,7 @@ private inductive ChoiceBisim : Process Name Constant → Process Name Constant 
 theorem bisimilarity_congr_choice :
     (p ~[lts (defs := defs)] q) → (choice p r) ~[lts (defs := defs)] (choice q r) := by
   intro h
-  exists @ChoiceBisim _ _ defs
-  constructor
-  · constructor; assumption
+  refine ⟨@ChoiceBisim _ _ defs, .choice h, ?_⟩
   intro s1 s2 r μ
   constructor
   case left =>

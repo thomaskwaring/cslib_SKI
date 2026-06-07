@@ -55,7 +55,7 @@ deriving DecidableEq
 namespace Act
 
 /-- An action is visible if it a name or a coname. -/
-@[scoped grind]
+@[scoped grind, mk_iff]
 inductive IsVisible : Act Name → Prop where
   | name : IsVisible (Act.name a)
   | coname : IsVisible (Act.coname a)
@@ -66,7 +66,7 @@ theorem isVisible_neq_τ {μ : Act Name} (h : μ.IsVisible) : μ ≠ Act.τ := b
   cases μ <;> grind
 
 /-- Checks that an action is the coaction of another. -/
-@[scoped grind]
+@[scoped grind, mk_iff]
 inductive Co {Name : Type u} : Act Name → Act Name → Prop where
   | nc : Co (name a) (coname a)
   | cn : Co (coname a) (name a)
