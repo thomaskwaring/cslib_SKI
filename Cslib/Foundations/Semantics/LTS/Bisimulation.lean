@@ -448,7 +448,7 @@ theorem HomBisimilarity.symm_simulation :
     exact ⟨⟨fun _ _ => Bisimilarity.symm⟩, (Bisimilarity.isBisimulation lts lts).isSimulation⟩
   · intro ⟨r, hrel, ⟨hsymm⟩, hsim⟩
     use r, hrel
-    have : r = flip r := by ext; rw [flip]; grind
+    have : r = flip r := by grind [flip]
     simpa [IsBisimulation.isSimulation_iff, ←this]
 
 end Bisimulation
@@ -502,7 +502,7 @@ lemma IsSWBisimulation.isSimulation_flip [HasTau Label] (h : IsSWBisimulation lt
   intro s₂ s₁ hr μ
   exact (h hr μ).2
 
-lemma IsSWBisimulation.iff_isSimulation [HasTau Label] :
+theorem IsSWBisimulation.iff_isSimulation [HasTau Label] :
     IsSWBisimulation lts₁ lts₂ r ↔
       IsSimulation lts₁ lts₂.saturate r ∧ IsSimulation lts₂ lts₁.saturate (flip r) := by
   refine ⟨fun h => ⟨h.isSimulation, h.isSimulation_flip⟩, ?_⟩

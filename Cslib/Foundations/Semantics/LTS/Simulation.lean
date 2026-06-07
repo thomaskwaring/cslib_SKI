@@ -211,7 +211,7 @@ theorem IsSimulation.isSimulation_saturate_left [HasTau Label] {lts₁ : LTS Sta
 
 /-- Simulation is preserved by removing transitions on the left, and adding transitions on the
 right. -/
-lemma IsSimulation.mono (h₁ : lts₁'.Tr ≤ lts₁.Tr) (h₂ : lts₂.Tr ≤ lts₂'.Tr)
+theorem IsSimulation.mono (h₁ : lts₁'.Tr ≤ lts₁.Tr) (h₂ : lts₂.Tr ≤ lts₂'.Tr)
     (h : IsSimulation lts₁ lts₂ r) : IsSimulation lts₁' lts₂' r := by
   intro s₁ s₂ hr μ s₁' htr
   obtain ⟨s₂', htr', hr'⟩ := h s₁ s₂ hr μ s₁' (h₁ _ _ _ htr)
