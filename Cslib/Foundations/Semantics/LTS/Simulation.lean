@@ -124,6 +124,28 @@ theorem IsSimulation.sim_trace (hr : IsSimulation lts₁ lts₂ r) (hrel : r s�
       obtain ⟨s₂', hmtr₂, hrel'⟩ := ih hrel' hmtr
       use s₂', hmtr₂.stepL htr₂, hrel'
 
+theorem IsSimulation.sup (hr : IsSimulation lts₁ lts₂ r)
+    (hs : IsSimulation lts₁ lts₂ s) : IsSimulation lts₁ lts₂ (r ⊔ s) := by
+  rintro s₁ s₂ (hrel | hrel) μ s₁' htr
+  · obtain ⟨s₂', htr', hrel'⟩ := hr s₁ s₂ hrel μ s₁' htr
+    use s₂', htr', Or.inl hrel'
+  · obtain ⟨s₂', htr', hrel'⟩ := hs s₁ s₂ hrel μ s₁' htr
+    use s₂', htr', Or.inr hrel'
+
+theorem IsSimulation.sim_trace (hr : IsSimulation lts₁ lts₂ r) (hrel : r s₁ s₂) :
+    ∀ μs s₁', lts₁.MTr s₁ μs s₁' → ∃ s₂', lts₂.MTr s₂ μs s₂' ∧ r s₁' s₂' := by
+  intro μs s₁' hmtr
+  induction μs generalizing s₁ s₂ with
+  | nil =>
+    obtain rfl := hmtr.nil_eq
+    exact ⟨s₂, MTr.refl, hrel⟩
+  | cons μ μs ih =>
+    cases hmtr
+    case stepL s₁'' htr hmtr =>
+      obtain ⟨s₂'', htr₂, hrel'⟩: ∃ s2', lts₂.Tr s₂ μ s2' ∧ r s₁'' s2' := hr _ _ hrel μ s₁'' htr
+      obtain ⟨s₂', hmtr₂, hrel'⟩ := ih hrel' hmtr
+      use s₂', hmtr₂.stepL htr₂, hrel'
+
 /-- Simulation equivalence relates all states `s₁` and `s2` such that `s₁ ≤[lts₁ lts₂] s2` and
 `s2 ≤[lts₂ lts₁] s₁`. -/
 def SimulationEquiv (lts₁ : LTS State₁ Label) (lts₂ : LTS State₂ Label) :
@@ -198,7 +220,7 @@ theorem IsSimulation.isSimulation_saturate_left [HasTau Label] {lts₁ : LTS Sta
 
 /-- Simulation is preserved by removing transitions on the left, and adding transitions on the
 right. -/
-lemma IsSimulation.mono (h₁ : lts₁'.Tr ≤ lts₁.Tr) (h₂ : lts₂.Tr ≤ lts₂'.Tr)
+theorem IsSimulation.mono (h₁ : lts₁'.Tr ≤ lts₁.Tr) (h₂ : lts₂.Tr ≤ lts₂'.Tr)
     (h : IsSimulation lts₁ lts₂ r) : IsSimulation lts₁' lts₂' r := by
   intro s₁ s₂ hr μ s₁' htr
   obtain ⟨s₂', htr', hr'⟩ := h s₁ s₂ hr μ s₁' (h₁ _ _ _ htr)
