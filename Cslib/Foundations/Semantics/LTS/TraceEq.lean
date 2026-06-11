@@ -26,7 +26,8 @@ Definitions and results on trace equivalence for `LTS`s.
 ## Main statements
 
 - `TraceEq.eqv`: trace equivalence is an equivalence relation (see `Equivalence`).
-- `Deterministic.isSimulation_traceEq`: in any deterministic `LTS`, trace equivalence is a simulation.
+- `Deterministic.isSimulation_traceEq`: in any deterministic `LTS`, trace equivalence is a
+  simulation.
 
 -/
 
