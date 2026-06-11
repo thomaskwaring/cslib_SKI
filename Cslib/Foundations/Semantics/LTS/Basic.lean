@@ -94,11 +94,13 @@ theorem MTr.single {s1 : State} {μ : Label} {s2 : State} :
   · exact h
   · apply MTr.refl
 
-lemma MTr.cons_iff {lts : LTS State Label} :
+theorem MTr.cons_iff {lts : LTS State Label} :
     lts.MTr s1 (μ :: μs) s2 ↔ ∃ s, lts.Tr s1 μ s ∧ lts.MTr s μs s2 := by
   constructor
-  · rintro (_ | ⟨htr, hmtr⟩); exact ⟨_, htr, hmtr⟩
-  · intro ⟨s, htr, hmtr⟩; exact .stepL htr hmtr
+  · rintro (_ | ⟨htr, hmtr⟩)
+    exact ⟨_, htr, hmtr⟩
+  · intro ⟨s, htr, hmtr⟩
+    exact .stepL htr hmtr
 
 /-- Any multistep transition can be extended by adding a transition. -/
 theorem MTr.stepR {s1 : State} {μs : List Label} {s2 : State} {μ : Label} {s3 : State} :
@@ -134,7 +136,7 @@ theorem MTr.single_invert (s1 : State) (μ : Label) (s2 : State) :
     cases hmtr
     exact htr
 
-@[simp] lemma MTr.singleton_iff (s1 : State) (μ : Label) (s2 : State) :
+@[simp] theorem MTr.singleton_iff (s1 : State) (μ : Label) (s2 : State) :
   lts.MTr s1 [μ] s2 ↔ lts.Tr s1 μ s2 := ⟨MTr.single_invert lts s1 μ s2, MTr.single lts⟩
 
 /-- In any zero-steps multistep transition, the origin and the derivative are the same. -/
@@ -192,17 +194,17 @@ class Deterministic (lts : LTS State Label) where
   deterministic (s1 : State) (μ : Label) (s2 s3 : State) :
     lts.Tr s1 μ s2 → lts.Tr s1 μ s3 → s2 = s3
 
-lemma Tr.eq_of_tr_of_deterministic {lts : LTS State Label} [lts.Deterministic]
+theorem Deterministic.eq_of_tr {lts : LTS State Label} [lts.Deterministic]
     (htr : lts.Tr s1 μ s2) (htr' : lts.Tr s1 μ s2') : s2 = s2' :=
   Deterministic.deterministic s1 μ s2 s2' htr htr'
 
-lemma MTr.eq_of_mtr_of_deterministic {lts : LTS State Label} [lts.Deterministic]
+lemma Deterministic.eq_of_mtr {lts : LTS State Label} [lts.Deterministic]
     (hmtr : lts.MTr s1 μs s2) (hmtr' : lts.MTr s1 μs s2') : s2 = s2' := by
   induction μs generalizing s1 s2 s2' with
   | nil => grind
   | cons μ μs ih =>
     rcases hmtr with (_ | ⟨htr, hmtr⟩); rcases hmtr' with (_ | ⟨htr', hmtr'⟩)
-    rw [htr.eq_of_tr_of_deterministic htr'] at hmtr
+    rw [eq_of_tr htr htr'] at hmtr
     exact ih hmtr hmtr'
 
 /-- The `μ`-image of a state `s` is the set of all `μ`-derivatives of `s`. -/
