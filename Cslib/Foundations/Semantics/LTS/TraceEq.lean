@@ -26,7 +26,7 @@ Definitions and results on trace equivalence for `LTS`s.
 ## Main statements
 
 - `TraceEq.eqv`: trace equivalence is an equivalence relation (see `Equivalence`).
-- `TraceEq.deterministic_sim`: in any deterministic `LTS`, trace equivalence is a simulation.
+- `Deterministic.isSimulation_traceEq`: in any deterministic `LTS`, trace equivalence is a simulation.
 
 -/
 
@@ -145,7 +145,7 @@ lemma TraceEq.traceEq_of_tr_of_tr {lts₁ : LTS State₁ Label} {lts₂ : LTS St
   simp_rw [TraceEq, htr₁.traces_eq_of_deterministic, htr₂.traces_eq_of_deterministic, h]
 
 /-- In deterministic LTSs, trace equivalence is a simulation. -/
-theorem TraceEq.deterministic_isSimulation {lts₁ : LTS State₁ Label} {lts₂ : LTS State₂ Label}
+theorem Deterministic.isSimulation_traceEq {lts₁ : LTS State₁ Label} {lts₂ : LTS State₂ Label}
     [hdet₁ : lts₁.Deterministic] [hdet₂ : lts₂.Deterministic] :
     IsSimulation lts₁ lts₂ (TraceEq lts₁ lts₂) := by
   intro s₁ s₂ h μ s₁' htr1
@@ -156,11 +156,11 @@ theorem SimulationEquiv.traceEq (h : s₁ ≤≥[lts₁,lts₂] s₂) : s₁ ~tr
   obtain ⟨⟨_, h, hr⟩, _, h', hr'⟩ := h
   exact (hr.traces_subset h).antisymm (hr'.traces_subset h')
 
-theorem traceEq_iff_simulationEquiv_of_deterministic {lts₁ : LTS State₁ Label}
+theorem Deterministic.traceEq_iff_simulationEquiv {lts₁ : LTS State₁ Label}
     {lts₂ : LTS State₂ Label} [hdet₁ : lts₁.Deterministic] [hdet₂ : lts₂.Deterministic]
     (s₁ : State₁) (s₂ : State₂) : (s₁ ~tr[lts₁,lts₂] s₂) ↔ s₁ ≤≥[lts₁,lts₂] s₂ :=
   ⟨fun h =>
-    ⟨⟨_, h, TraceEq.deterministic_isSimulation⟩, _, h.symm, TraceEq.deterministic_isSimulation⟩,
+    ⟨⟨_, h, Deterministic.isSimulation_traceEq⟩, _, h.symm, Deterministic.isSimulation_traceEq⟩,
     SimulationEquiv.traceEq⟩
 
 end Cslib.LTS

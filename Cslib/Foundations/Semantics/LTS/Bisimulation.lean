@@ -402,7 +402,7 @@ theorem IsBisimulation.deterministic_traceEq_isBisimulation
     [lts₁.Deterministic] [lts₂.Deterministic] :
     (IsBisimulation lts₁ lts₂ (TraceEq lts₁ lts₂)) := by
   rw [IsBisimulation.isSimulation_iff, TraceEq.flip_eq]
-  exact ⟨TraceEq.deterministic_isSimulation, TraceEq.deterministic_isSimulation⟩
+  exact ⟨Deterministic.isSimulation_traceEq, Deterministic.isSimulation_traceEq⟩
 
 /-- In deterministic LTSs, trace equivalence implies bisimilarity. -/
 theorem Bisimilarity.deterministic_traceEq_bisim {lts₁ : LTS State₁ Label} {lts₂ : LTS State₂ Label}
@@ -410,10 +410,10 @@ theorem Bisimilarity.deterministic_traceEq_bisim {lts₁ : LTS State₁ Label} {
     (s₁ ~[lts₁,lts₂] s₂) := by
   use TraceEq lts₁ lts₂, h, IsBisimulation.deterministic_traceEq_isBisimulation
 
-theorem deterministic_bisim_tfae {lts₁ : LTS State₁ Label} {lts₂ : LTS State₂ Label}
+theorem Deterministic.bisim_tfae {lts₁ : LTS State₁ Label} {lts₂ : LTS State₂ Label}
     [lts₁.Deterministic] [lts₂.Deterministic] (s₁ : State₁) (s₂ : State₂) :
     [s₁ ~[lts₁,lts₂] s₂, s₁ ~tr[lts₁,lts₂] s₂, s₁ ≤≥[lts₁,lts₂] s₂].TFAE := by
-  tfae_have 2 ↔ 3 := traceEq_iff_simulationEquiv_of_deterministic s₁ s₂
+  tfae_have 2 ↔ 3 := Deterministic.traceEq_iff_simulationEquiv s₁ s₂
   tfae_have 1 → 2 := Bisimilarity.le_traceEq s₁ s₂
   tfae_have 2 → 1 := Bisimilarity.deterministic_traceEq_bisim
   tfae_finish
@@ -423,7 +423,7 @@ theorem Bisimilarity.deterministic_bisim_eq_traceEq
     {lts₁ : LTS State₁ Label} {lts₂ : LTS State₂ Label}
     [lts₁.Deterministic] [lts₂.Deterministic] : Bisimilarity lts₁ lts₂ = TraceEq lts₁ lts₂ := by
   ext s₁ s₂
-  exact (deterministic_bisim_tfae s₁ s₂).out 0 1
+  exact (Deterministic.bisim_tfae s₁ s₂).out 0 1
 
 /-- Homogeneous bisimilarity can also be characterized through symmetric simulations. -/
 theorem HomBisimilarity.symm_simulation :
