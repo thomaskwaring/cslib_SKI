@@ -410,6 +410,8 @@ theorem Bisimilarity.deterministic_traceEq_bisim {lts₁ : LTS State₁ Label} {
     (s₁ ~[lts₁,lts₂] s₂) := by
   use TraceEq lts₁ lts₂, h, IsBisimulation.deterministic_traceEq_isBisimulation
 
+/-- In a deterministic lts, bisimilarity, trace equivalence, and simulation equivalence are
+equivalent to one-another. -/
 theorem Deterministic.bisim_tfae {lts₁ : LTS State₁ Label} {lts₂ : LTS State₂ Label}
     [lts₁.Deterministic] [lts₂.Deterministic] (s₁ : State₁) (s₂ : State₂) :
     [s₁ ~[lts₁,lts₂] s₂, s₁ ~tr[lts₁,lts₂] s₂, s₁ ≤≥[lts₁,lts₂] s₂].TFAE := by

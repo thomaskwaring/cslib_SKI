@@ -85,6 +85,15 @@ inductive MTr (lts : LTS State Label) : State → List Label → State → Prop 
     lts.Tr s1 μ s2 → lts.MTr s2 μs s3 →
     lts.MTr s1 (μ :: μs) s3
 
+/-- In any zero-steps multistep transition, the origin and the derivative are the same. -/
+@[scoped grind .]
+theorem MTr.nil_eq (h : lts.MTr s1 [] s2) : s1 = s2 := by
+  cases h
+  rfl
+
+@[simp] theorem MTr.nil_iff (s1 s2 : State) : lts.MTr s1 [] s2 ↔ s1 = s2 :=
+  ⟨nil_eq lts, fun h => h ▸ MTr.refl⟩
+
 /-- Any transition is also a multistep transition. -/
 @[scoped grind →]
 theorem MTr.single {s1 : State} {μ : Label} {s2 : State} :
@@ -94,6 +103,8 @@ theorem MTr.single {s1 : State} {μ : Label} {s2 : State} :
   · exact h
   · apply MTr.refl
 
+/-- A multistep transition along `μ :: μs` is a transition labelled by `μ` plus a multistep
+transition labelled by `μs`. -/
 theorem MTr.cons_iff {lts : LTS State Label} :
     lts.MTr s1 (μ :: μs) s2 ↔ ∃ s, lts.Tr s1 μ s ∧ lts.MTr s μs s2 := by
   constructor
@@ -136,15 +147,11 @@ theorem MTr.single_invert (s1 : State) (μ : Label) (s2 : State) :
     cases hmtr
     exact htr
 
+/-- A 1-sized multistep transition is exactly a single transision with the given label. -/
 @[simp] theorem MTr.singleton_iff (s1 : State) (μ : Label) (s2 : State) :
   lts.MTr s1 [μ] s2 ↔ lts.Tr s1 μ s2 := ⟨MTr.single_invert lts s1 μ s2, MTr.single lts⟩
 
-/-- In any zero-steps multistep transition, the origin and the derivative are the same. -/
-@[scoped grind .]
-theorem MTr.nil_eq (h : lts.MTr s1 [] s2) : s1 = s2 := by
-  cases h
-  rfl
-
+/-- A multistep transition over a concatenation can be split into two multistep transitions. -/
 theorem MTr.split {lts : LTS State Label} (h : lts.MTr s1 (μs ++ μs') s2) :
     ∃ s, lts.MTr s1 μs s ∧ lts.MTr s μs' s2 := by
   induction μs generalizing s1 s2 with
@@ -156,6 +163,8 @@ theorem MTr.split {lts : LTS State Label} (h : lts.MTr s1 (μs ++ μs') s2) :
       obtain ⟨s', hmtr', hmtr''⟩ := ih hmtr
       use s', .stepL htr hmtr', hmtr''
 
+/-- Multistep-transitions over `μs ++ μs'` are exactly multistep transitions over `μs` and `μs'`
+with a common end & start state (respectively). -/
 theorem MTr.append_iff : lts.MTr s1 (μs ++ μs') s2 ↔ ∃ s, lts.MTr s1 μs s ∧ lts.MTr s μs' s2 := by
   refine ⟨MTr.split, ?_⟩
   intro ⟨_, h, h'⟩
@@ -198,7 +207,9 @@ theorem Deterministic.eq_of_tr {lts : LTS State Label} [lts.Deterministic]
     (htr : lts.Tr s1 μ s2) (htr' : lts.Tr s1 μ s2') : s2 = s2' :=
   Deterministic.deterministic s1 μ s2 s2' htr htr'
 
-lemma Deterministic.eq_of_mtr {lts : LTS State Label} [lts.Deterministic]
+/-- In a deterministic lts, multistep transitions with a given start state and trace reach a unique
+end state. -/
+theorem Deterministic.eq_of_mTr {lts : LTS State Label} [lts.Deterministic]
     (hmtr : lts.MTr s1 μs s2) (hmtr' : lts.MTr s1 μs s2') : s2 = s2' := by
   induction μs generalizing s1 s2 s2' with
   | nil => grind
