@@ -203,6 +203,7 @@ theorem para_confluence : Confluent (@Parallel Var) :=
   para_diamond.toConfluent
 
 /-- β-reduction is confluent. -/
+@[wikidata Q1308502]
 theorem confluence_beta : Confluent (@FullBeta Var) := by
   have eq : ReflTransGen (@Parallel Var) = ReflTransGen (@FullBeta Var) := by
     ext
