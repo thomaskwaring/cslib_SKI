@@ -9,6 +9,7 @@ module
 public import Cslib.Foundations.Relation.Domain
 public import Cslib.Foundations.Semantics.LTS.Simulation
 public import Cslib.Foundations.Semantics.LTS.TraceEq
+public import Mathlib.Tactic.TFAE
 
 /-! # Bisimulation and Bisimilarity
 
