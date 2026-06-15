@@ -31,7 +31,7 @@ instance instIsIntuitionisticIPL : IsIntuitionistic Atom (IPL Atom) where
 
 /-- Derivation of efq in an arbitrary context. -/
 def IsIntuitionistic.efqCtx [IsIntuitionistic Atom T] (Γ : Ctx Atom) (A : Proposition Atom)
-    : T⇓(Γ ⊢ ⊥ → A) := (efq A : T⇓(⊥ → A)).weak_ctx (Finset.empty_subset Γ)
+    : T⇓(Γ ⊢ ⊥ → A) := (efq A : T⇓(⊥ → A)).weakCtx (Finset.empty_subset Γ)
 
 /-- Efq as a derived rule. -/
 def IsIntuitionistic.efqRule [IsIntuitionistic Atom T] (Γ : Ctx Atom) (A : Proposition Atom)
@@ -49,7 +49,7 @@ instance instIsClassicalCPL : IsClassical Atom (CPL Atom) where
 /-- Proof by contradiction as a derived rule. -/
 def IsClassical.byContra [IsClassical Atom T] {Γ : Ctx Atom} {A : Proposition Atom}
     (D : T⇓(insert (¬ A) Γ ⊢ ⊥)) : T⇓(Γ ⊢ A) :=
-  implE (A := ¬¬A) ((dne A : T⇓(¬¬A → A)) |>.weak_ctx <| Finset.empty_subset ..) D.implI
+  implE (A := ¬¬A) ((dne A : T⇓(¬¬A → A)) |>.weakCtx <| Finset.empty_subset ..) D.implI
 
 instance instIsIntuitionisticOfIsClassical [IsClassical Atom T] : IsIntuitionistic Atom T where
   efq A := implI _ <| byContra <| ass (by grind)
