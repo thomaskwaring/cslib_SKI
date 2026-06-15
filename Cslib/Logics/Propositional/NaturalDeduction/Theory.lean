@@ -57,7 +57,7 @@ variable {T T' T'' : Theory Atom}
 /-- Map a derivation along an embedding. -/
 def Derivation.mapEmbedding (emb : T.Embedding T') {Γ : Ctx Atom} {A : Proposition Atom} :
     T.Derivation Γ A → T'.Derivation Γ A
-  | ax hA => (emb.derOfMem hA).weak_ctx (Finset.empty_subset Γ)
+  | ax hA => (emb.derOfMem hA).weakCtx (Finset.empty_subset Γ)
   | ass hA => ass hA
   | andI D E => andI (D.mapEmbedding emb) (E.mapEmbedding emb)
   | andE₁ D => andE₁ (D.mapEmbedding emb)
@@ -226,7 +226,7 @@ lemma IsIntuitionistic.nonempty_iff_ipl_le : Nonempty (IsIntuitionistic Atom T) 
 
 /-- Derivation of efq in an arbitrary context. -/
 def IsIntuitionistic.efqCtx [IsIntuitionistic Atom T] (Γ : Ctx Atom) (A : Proposition Atom)
-    : T⇓(Γ ⊢ ⊥ → A) := (efq A : T⇓(⊥ → A)).weak_ctx (Finset.empty_subset Γ)
+    : T⇓(Γ ⊢ ⊥ → A) := (efq A : T⇓(⊥ → A)).weakCtx (Finset.empty_subset Γ)
 
 /-- Efq as a derived rule. -/
 def IsIntuitionistic.efqRule [IsIntuitionistic Atom T] (Γ : Ctx Atom) (A : Proposition Atom)
@@ -268,7 +268,7 @@ lemma IsClassical.nonempty_iff_cpl_le : Nonempty (IsClassical Atom T) ↔ CPL At
 /-- Proof by contradiction as a derived rule. -/
 def IsClassical.byContra [IsClassical Atom T] {Γ : Ctx Atom} {A : Proposition Atom}
     (D : T⇓(insert (¬ A) Γ ⊢ ⊥)) : T⇓(Γ ⊢ A) :=
-  implE (A := ¬¬A) ((dne A : T⇓(¬¬A → A)) |>.weak_ctx <| Finset.empty_subset ..) D.implI
+  implE (A := ¬¬A) ((dne A : T⇓(¬¬A → A)) |>.weakCtx <| Finset.empty_subset ..) D.implI
 
 instance instIsIntuitionisticOfIsClassical [IsClassical Atom T] : IsIntuitionistic Atom T where
   efq A := implI _ <| byContra <| ass (by grind)
@@ -284,7 +284,7 @@ def IsClassical.lem [IsClassical Atom T] (A : Proposition Atom) : T⇓(A ∨ ¬ 
 /-- Proof by cases for a classical theory. -/
 def IsClassical.byCases [IsClassical Atom T] {Γ : Ctx Atom} {A B : Proposition Atom}
     (D : T⇓(insert A Γ ⊢ B)) (D' : T⇓(insert (¬ A) Γ ⊢ B)) : T⇓(Γ ⊢ B) :=
-  (lem A |>.weak_ctx <| Finset.empty_subset Γ).orE D D'
+  (lem A |>.weakCtx <| Finset.empty_subset Γ).orE D D'
 
 /-- Pierce's law in a classical theory. -/
 def IsClassical.pierce [IsClassical Atom T] (A B : Proposition Atom) : T⇓(((A → B) → A) → A) := by
