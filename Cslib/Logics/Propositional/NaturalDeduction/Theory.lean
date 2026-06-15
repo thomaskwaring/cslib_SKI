@@ -8,6 +8,7 @@ module
 public import Cslib.Logics.Propositional.NaturalDeduction.Basic
 public import Mathlib.Order.Antisymmetrization
 public import Mathlib.Tactic.TFAE
+public import Mathlib.Data.Set.Finite.Basic
 
 /-! # Results and constructions for propositional theories
 
@@ -245,6 +246,29 @@ lemma IsIntuitionistic.isInconsistent_iff_derivableIn_bot [IsIntuitionistic Atom
   constructor
   intro A
   exact ⟨efqRule ∅ A D⟩
+
+/-! The **compactness theorem**: a theory is inconsistent iff it has a finite inconsistent
+subtheory. -/
+theorem compactness [IsIntuitionistic Atom T] :
+    IsInconsistent Atom T ↔ ∃ T' : Theory Atom,
+      IsInconsistent Atom (IPL Atom ∪ T' : Theory Atom) ∧ T'.Finite ∧ T' ⊆ T := by
+  constructor
+  · rw [isInconsistent_iff_derivableIn_bot]
+    intro ⟨D⟩
+    let ⟨⟨Γ, hΓ⟩, D⟩ := Derivation.collectAxs D
+    refine ⟨Γ, ?_, Γ.finite_toSet, by grind⟩
+    have : IsIntuitionistic Atom (IPL Atom ∪ Γ : Theory Atom) :=
+      instIsIntuitionisticOfEmbedding (.ofSubset Set.subset_union_left)
+    exact isInconsistent_iff_derivableIn_bot.mpr ⟨(assToAxs D).weakTheory <| by grind⟩
+  · intro ⟨T', h, _, hsub⟩
+    have : IsIntuitionistic Atom (IPL Atom ∪ T' : Theory Atom) :=
+      instIsIntuitionisticOfEmbedding (.ofSubset Set.subset_union_left)
+    rw [isInconsistent_iff_derivableIn_bot] at h ⊢
+    suffices IPL Atom ∪ T' ≤ T from WeakerThan.iff_forall_derivableIn_of_derivableIn.mp this _ h
+    rw [WeakerThan.iff_forall_mem_derivableIn]
+    rintro A (⟨A, rfl⟩ | hA)
+    · exact ⟨efq A⟩
+    · exact ⟨.ax <| hsub hA⟩
 
 /-- `CPL` is indeed classical. -/
 instance instIsClassicalCPL : IsClassical Atom (CPL Atom) where

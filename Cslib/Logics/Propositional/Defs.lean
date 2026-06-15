@@ -81,10 +81,20 @@ def Proposition.subst {Atom Atom' : Type u} (f : Atom → Proposition Atom') :
   | or A B => (A.subst f) ∨ (B.subst f)
   | impl A B => (A.subst f) → (B.subst f)
 
--- This is probably a lawful monad, but that doesn't seem to be important.
 instance : Monad Proposition where
   pure := .atom
   bind A f := A.subst f
+
+instance : LawfulMonad Proposition := by
+  apply LawfulMonad.mk'
+  · intro _ A
+    induction A <;> simp_all [Functor.map, Proposition.subst]
+  · simp [bind, Proposition.subst, pure]
+  · intro _ _ _ A
+    induction A <;> simp_all [bind, Proposition.subst]
+  all_goals
+    intro _ _ _ _
+    rfl
 
 /-- Theories are arbitrary sets of propositions. -/
 abbrev Theory (Atom) := Set (Proposition Atom)
