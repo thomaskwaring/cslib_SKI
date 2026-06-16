@@ -27,6 +27,10 @@ This file provides results and constructions for manipulating proposition theori
 
 - `Theory.WeakerThan` is a preorder, and equality in its poset reflection (expressed as `T ≈ T'`)
   is characterised by `T.saturation = T'.saturation`.
+- `IsIntuitionistic.isInconsistent_iff_derivableIn_bot`: an intuitionistic theory is inconsistent
+  iff it derives `⊥`.
+- `isInconsistent_iff_exists_isInconsistent_and_finite_and_subset`: the compactness theorem, an
+  intuitionistic theory is inconsistent iff it has a finite inconsistent subtheory.
 - We show that `IPL` is an intuitionistic theory, and that the theories `CPL`, `LEM ∪ IPL` and
   `Pierce ∪ IPL` are equivalent and classical.
 -/
@@ -250,7 +254,7 @@ lemma IsIntuitionistic.isInconsistent_iff_derivableIn_bot [IsIntuitionistic Atom
 
 /-- The **compactness theorem**: an intuitionistic theory is inconsistent iff it has a finite
 inconsistent subtheory. -/
-theorem compactness [IsIntuitionistic Atom T] :
+theorem isInconsistent_iff_exists_isInconsistent_and_finite_and_subset [IsIntuitionistic Atom T] :
     IsInconsistent Atom T ↔ ∃ T' : Theory Atom,
       IsInconsistent Atom (IPL Atom ∪ T' : Theory Atom) ∧ T'.Finite ∧ T' ⊆ T := by
   constructor
