@@ -94,11 +94,18 @@ lemma WeakerThan.mk' (h : ∀ {A}, A ∈ T → DerivableIn T' A) : T ≤ T' := �
 /-- Noncomputably obtain an embedding from `T ≤ T'`. -/
 noncomputable def WeakerThan.embedding (h : T ≤ T') : T.Embedding T' := h.some
 
+lemma WeakerThan.derivableIn_of_mem (h : T ≤ T') {A : Proposition Atom} (hA : A ∈ T) :
+    DerivableIn T' A := ⟨h.embedding.derOfMem hA⟩
+
 lemma WeakerThan.of_subset (h : T ⊆ T') : T ≤ T' := ⟨Embedding.ofSubset h⟩
 
 /-- Noncomputably turn a `T` derivation into a `T'` derivation, for `T ≤ T'`. -/
 noncomputable def Derivation.mapLE (h : T ≤ T') {Γ : Ctx Atom} {A : Proposition Atom}
     (D : T⇓(Γ ⊢ A)) : T'⇓(Γ ⊢ A) := D.mapEmbedding h.embedding
+
+lemma DerivableIn.of_le (h : T ≤ T') {Γ : Ctx Atom} {A : Proposition Atom} :
+    DerivableIn T (Γ ⊢ A) → DerivableIn T' (Γ ⊢ A)
+  | ⟨D⟩ => ⟨D.mapLE h⟩
 
 namespace WeakerThan
 
@@ -113,17 +120,11 @@ instance instPreorderTheory : Preorder (Theory Atom) where
 
 lemma iff_forall_mem_derivableIn :
     T ≤ T' ↔ ∀ {A : Proposition Atom}, A ∈ T → DerivableIn T' A :=
-  ⟨fun h _ hA => ⟨h.embedding.derOfMem hA⟩, .mk'⟩
+  ⟨WeakerThan.derivableIn_of_mem, .mk'⟩
 
 lemma iff_forall_derivableIn_of_derivableIn :
-    T ≤ T' ↔ ∀ A : Proposition Atom, DerivableIn T A → DerivableIn T' A := by
-  constructor
-  · intro h A hA
-    exact ⟨hA.toDerivation.mapLE h⟩
-  · intro h
-    refine ⟨⟨?_⟩⟩
-    intro A hA
-    exact (h A ⟨ax hA⟩).toDerivation
+    T ≤ T' ↔ ∀ {A : Proposition Atom}, DerivableIn T A → DerivableIn T' A :=
+  ⟨fun h => DerivableIn.of_le h, fun h => WeakerThan.mk' (h ⟨ax ·⟩)⟩
 
 instance : Bot (Theory Atom) := ⟨MPL Atom⟩
 
@@ -152,11 +153,11 @@ lemma equiv_iff_forall_derivableIn_derivableIn :
     T ≈ T' ↔ ∀ A : Proposition Atom, DerivableIn T A ↔ DerivableIn T' A := by
   constructor
   · intro ⟨h, h'⟩ A
-    exact ⟨iff_forall_derivableIn_of_derivableIn.mp h A,
-      iff_forall_derivableIn_of_derivableIn.mp h' A⟩
+    exact ⟨iff_forall_derivableIn_of_derivableIn.mp h,
+      iff_forall_derivableIn_of_derivableIn.mp h'⟩
   · intro h
-    refine ⟨iff_forall_derivableIn_of_derivableIn.mpr fun A => (h A).mp,
-      iff_forall_derivableIn_of_derivableIn.mpr fun A => (h A).mpr⟩
+    exact ⟨iff_forall_derivableIn_of_derivableIn.mpr (h _).mp,
+      iff_forall_derivableIn_of_derivableIn.mpr (h _).mpr⟩
 
 
 /-! ### Saturated theories -/
