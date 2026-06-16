@@ -353,6 +353,7 @@ theorem DerivableIn.ass_to_axs {T : Theory Atom} {Γ Δ : Ctx Atom} {B : Proposi
     DerivableIn T ((Γ ∪ Δ) ⊢ B) → DerivableIn (T ∪ Δ : Theory Atom) (Γ ⊢ B)
   | ⟨D⟩ => ⟨Theory.Derivation.assToAxs D⟩
 
+/-- Move a finset of axioms to the context. -/
 def Theory.Derivation.axsToAss {T : Theory Atom} {Γ Δ : Ctx Atom} {B : Proposition Atom}
     (D : (T ∪ Δ : Theory Atom)⇓(Γ ⊢ B)) : T⇓((Γ ∪ Δ) ⊢ B) :=
   let ⟨⟨Δ', hΔ'⟩, D'⟩ := collectAxs D
