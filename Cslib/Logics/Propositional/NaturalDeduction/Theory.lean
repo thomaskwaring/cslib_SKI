@@ -248,7 +248,7 @@ lemma IsIntuitionistic.isInconsistent_iff_derivableIn_bot [IsIntuitionistic Atom
   intro A
   exact ⟨efqRule ∅ A D⟩
 
-/-! The **compactness theorem**: an intuitionistic theory is inconsistent iff it has a finite
+/-- The **compactness theorem**: an intuitionistic theory is inconsistent iff it has a finite
 inconsistent subtheory. -/
 theorem compactness [IsIntuitionistic Atom T] :
     IsInconsistent Atom T ↔ ∃ T' : Theory Atom,
