@@ -239,6 +239,23 @@ def IsIntuitionistic.contra [IsIntuitionistic Atom T] {Γ : Ctx Atom} (A B : Pro
     (hΓ : A ∈ Γ) (hΓ' : (¬A) ∈ Γ) : T⇓(Γ ⊢ B) :=
   efqRule Γ B <| implE (ass hΓ') (ass hΓ)
 
+def AtomIPL (Atom : Type*) [Bot Atom] : Theory Atom := {⊥ → atom x | x : Atom}
+
+def efqOfAtom : (A : Proposition Atom) → (AtomIPL Atom).Derivation ∅ (⊥ → A)
+  | atom x => .ax ⟨x, rfl⟩
+  | Proposition.and A B =>
+    implI _ <| andI
+      (implE ((efqOfAtom A).weakCtx (Finset.empty_subset ..)) (ass <| Finset.mem_insert_self ..))
+      (implE ((efqOfAtom B).weakCtx (Finset.empty_subset ..)) (ass <| Finset.mem_insert_self ..))
+  | Proposition.or A B =>
+    implI _ <| orI₁ <|
+      (implE ((efqOfAtom A).weakCtx (Finset.empty_subset ..)) (ass <| Finset.mem_insert_self ..))
+  | impl A B =>
+    implI _ <| implI _ <|
+      (implE ((efqOfAtom B).weakCtx (Finset.empty_subset ..)) (ass <| by grind))
+
+instance : IsIntuitionistic Atom (AtomIPL Atom) where efq := efqOfAtom
+
 lemma IsIntuitionistic.isInconsistent_iff_derivableIn_bot [IsIntuitionistic Atom T] :
     IsInconsistent Atom T ↔ DerivableIn T (⊥ : Proposition Atom) := by
   refine ⟨fun h => h.forall_derivableIn ⊥, ?_⟩
@@ -247,8 +264,8 @@ lemma IsIntuitionistic.isInconsistent_iff_derivableIn_bot [IsIntuitionistic Atom
   intro A
   exact ⟨efqRule ∅ A D⟩
 
-/-! The **compactness theorem**: a theory is inconsistent iff it has a finite inconsistent
-subtheory. -/
+/-! The **compactness theorem**: an intuitionistic theory is inconsistent iff it has a finite
+inconsistent subtheory. -/
 theorem compactness [IsIntuitionistic Atom T] :
     IsInconsistent Atom T ↔ ∃ T' : Theory Atom,
       IsInconsistent Atom (IPL Atom ∪ T' : Theory Atom) ∧ T'.Finite ∧ T' ⊆ T := by
