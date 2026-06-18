@@ -18,7 +18,7 @@ open_scoped_all Cslib
   (This documentation and test is adapted from Mathlib.)
 
   Exceptions may be specified here using `#grind_lint skip`. This should be kept minimal, and some
-  of these were added upon the inital commit of this test. PRs removing exceptions are welcome.
+  of these were added upon the initial commit of this test. PRs removing exceptions are welcome.
 
   If this test fails, please modify newly introduced `grind` annotations to use the
   `grind_pattern ... where ...` syntax to add side conditions that will prevent the run-away.
@@ -73,14 +73,14 @@ open_scoped_all Cslib
 /-- (changes from lean#13166) -/
 #grind_lint skip Cslib.ωLanguage.map_id
 #grind_lint skip Cslib.LTS.Bisimilarity.gfp
-#grind_lint skip Cslib.LTS.Bisimilarity.is_bisimulation
-#grind_lint skip Cslib.LTS.Bisimilarity.largest_bisimulation
+#grind_lint skip Cslib.LTS.Bisimilarity.isBisimulation
+#grind_lint skip Cslib.LTS.IsBisimulation.le_bisimilarity
 #grind_lint skip Cslib.LTS.IsBisimulation.bot
 #grind_lint skip Cslib.LTS.IsBisimulation.comp
 #grind_lint skip Cslib.LTS.IsBisimulation.inv
 #grind_lint skip Cslib.LTS.IsBisimulation.sup
 #grind_lint skip Cslib.LTS.IsBisimulation.traceEq
-#grind_lint skip Cslib.LTS.IsBisimulationUpTo.is_bisimulation
+#grind_lint skip Cslib.LTS.IsBisimulationUpTo.isBisimulation
 #grind_lint skip Cslib.Logic.HML.theoryEq_isBisimulation
 
 #guard_msgs in

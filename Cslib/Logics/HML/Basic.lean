@@ -108,7 +108,7 @@ def Proposition.denotation (a : Proposition Label) (lts : LTS State Label)
   | .diamond μ a => {s | ∃ s', lts.Tr s μ s' ∧ s' ∈ a.denotation lts}
   | .box μ a => {s | ∀ s', lts.Tr s μ s' → s' ∈ a.denotation lts}
 
-/-- The theory of a state is the set of all propositions that it satifies. -/
+/-- The theory of a state is the set of all propositions that it satisfies. -/
 abbrev theory (lts : LTS State Label) (s : State) : Set (Proposition Label) :=
   {a | Satisfies lts s a}
 
@@ -242,7 +242,7 @@ lemma bisimulation_satisfies {lts : LTS State Label}
     Satisfies lts s2 a := by
   induction a generalizing s1 s2 with
   | diamond => cases hs with | diamond htr _ => grind [hrb.follow_fst hr htr]
-  | _ => grind
+  | _ => grind [IsBisimulation]
 
 lemma bisimulation_TheoryEq {lts : LTS State Label}
     {hrb : lts.IsHomBisimulation r}
