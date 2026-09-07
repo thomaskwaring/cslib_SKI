@@ -125,8 +125,7 @@ theorem confluent_equivalents :
       EqvGen r ≤ MJoin r, EqvGen r = MJoin r].TFAE := by
   refine (List.tfae_cons ?_).mpr ⟨churchRosser_iff_eqvGen_le_mJoin, ?_⟩
   · grind
-  · simpa [← symmGen_eq_sup_swap, reflTransGen_symmGen] using
-      commute_equivalents (r₁ := r) (r₂ := r)
+  · simpa [reflTransGen_symmGen] using commute_equivalents (r₁ := r) (r₂ := r)
 
 theorem semiConfluent_iff_churchRosser : SemiConfluent r ↔ ChurchRosser r :=
   List.TFAE.out confluent_equivalents 2 1
