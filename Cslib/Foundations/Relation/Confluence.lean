@@ -34,7 +34,7 @@ namespace Relation
 
 open Function ReflTransGen
 
-@[simp] theorem Commute.to_confluent : Commute r r = Confluent r := rfl
+theorem Commute.to_confluent : Commute r r = Confluent r := rfl
 
 @[deprecated (since := "2026-09-03")] alias Commute.toConfluent := Commute.to_confluent
 

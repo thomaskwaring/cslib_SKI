@@ -35,12 +35,14 @@ def dom (r : α → β → Prop) : Set α := {a | ∃ b, r a b}
 /-- Codomain of a relation, aka range. -/
 def cod (r : α → β → Prop) : Set β := {b | ∃ a, r a b}
 
+/-- Generalisation of `Join` to two relations. -/
 def HJoin (r₁ r₂ : α → α → Prop) (a b : α) : Prop := ∃ c, r₁ a c ∧ r₂ b c
 
 /-- The join of the reflexive transitive closure. This is not named in Mathlib, but see
   `#loogle Relation.Join (Relation.ReflTransGen ?r)` -/
 abbrev MJoin (r : α → α → Prop) := Join (ReflTransGen r)
 
+/-- Generalisation of `MJoin` to two relations. -/
 abbrev MHJoin (r₁ r₂ : α → α → Prop) := HJoin (ReflTransGen r₁) (ReflTransGen r₂)
 
 /-- The relation `r` 'up to' the relation `s`. -/
@@ -69,6 +71,7 @@ abbrev Commute (r₁ r₂ : α → α → Prop) := DiamondCommute (ReflTransGen 
 abbrev SemiConfluent (r : α → α → Prop) :=
   ∀ {x y₁ y₂}, r x y₁ → ReflTransGen r x y₂ → MJoin r y₁ y₂
 
+/-- Generalisation of `SemiConfluent` to two relations. -/
 abbrev SemiCommute (r₁ r₂ : α → α → Prop) :=
   ∀ {x y₁ y₂}, r₁ x y₁ → ReflTransGen r₂ x y₂ → MHJoin r₂ r₁ y₁ y₂
 
