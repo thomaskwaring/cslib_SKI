@@ -17,6 +17,9 @@ combinatory logic. Some notable theorems:
 * `Diamond.to_confluent`: the diamond property implies confluence
 * `LocallyConfluent.terminating_toConfluent`: Newman's lemma
 
+We prove most results first for two relations, where `Confluent r` becomes `Commute r₁ r₂`, then
+specialize to the classical case where `r₁ = r₂`.
+
 ## References
 
 * [*Term Rewriting and All That*][Baader1998]

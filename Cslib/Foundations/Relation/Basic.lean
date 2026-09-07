@@ -71,7 +71,7 @@ theorem SymmGen.le_symmGen : r ≤ SymmGen r := fun _ _ => Or.inl
 theorem SymmGen.to_eqvGen (h : SymmGen r a b) : EqvGen r a b :=
   EqvGen.symmGen_le_eqvGen r _ _ h
 
-theorem symmGen_eq_sup_swap : SymmGen r = r ⊔ Function.swap r := rfl
+@[simp] theorem sup_swap_eq_symmGen : r ⊔ Function.swap r = SymmGen r := rfl
 
 theorem EqvGen.le_eqvGen : r ≤ EqvGen r := EqvGen.rel
 
