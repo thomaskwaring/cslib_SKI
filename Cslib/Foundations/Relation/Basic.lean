@@ -24,6 +24,8 @@ theorem WellFounded.iff_transGen : WellFounded (Relation.TransGen r) ↔ WellFou
 
 namespace Relation
 
+open Function
+
 /-- A pair of subrelations lifts to transitivity on the relation. -/
 @[implicit_reducible]
 def transLeftRight (s s' r : α → α → Prop) [IsTrans α r] (h : s ≤ r) (h' : s' ≤ r) :
@@ -40,10 +42,23 @@ def transLeft (s r : α → α → Prop) [IsTrans α r] (h : s ≤ r) : Trans s 
 def transRight (s r : α → α → Prop) [IsTrans α r] (h : s ≤ r) : Trans r s r where
   trans hab hbc := _root_.trans hab (h _ _ hbc)
 
+theorem comp_le_comp {s s' r r' : α → α → Prop} (hs : s ≤ s') (hr : r ≤ r') :
+    Comp s r ≤ Comp s' r' := fun a c ⟨b, hab, hbc⟩ ↦ ⟨b, hs a b hab, hr b c hbc⟩
+
+theorem comp_self_le (r : α → α → Prop) [IsTrans α r] : Comp r r ≤ r :=
+  fun _ _ ⟨_, hab, hbc⟩ ↦ _root_.trans hab hbc
+
+theorem swap_le_iff_le_swap {r₁ r₂ : α → α → Prop} : swap r₁ ≤ r₂ ↔ r₁ ≤ swap r₂ := by
+  constructor <;> intro h a b hab <;> exact h b a hab
+
 attribute [scoped grind] ReflGen TransGen ReflTransGen EqvGen
+
+theorem ReflGen.le_reflGen : r ≤ ReflGen r := fun _ _ => ReflGen.single
 
 theorem ReflGen.to_eqvGen (h : ReflGen r a b) : EqvGen r a b :=
   EqvGen.reflGen_le_eqvGen r _ _ h
+
+theorem TransGen.le_transGen : r ≤ TransGen r := fun _ _ => TransGen.single
 
 theorem TransGen.to_eqvGen (h : TransGen r a b) : EqvGen r a b :=
   EqvGen.transGen_le_eqvGen r _ _ h
@@ -51,17 +66,66 @@ theorem TransGen.to_eqvGen (h : TransGen r a b) : EqvGen r a b :=
 theorem ReflTransGen.to_eqvGen (h : ReflTransGen r a b) : EqvGen r a b :=
   EqvGen.reflTransGen_le_eqvGen r _ _ h
 
+theorem SymmGen.le_symmGen : r ≤ SymmGen r := fun _ _ => Or.inl
+
 theorem SymmGen.to_eqvGen (h : SymmGen r a b) : EqvGen r a b :=
   EqvGen.symmGen_le_eqvGen r _ _ h
+
+theorem EqvGen.le_eqvGen : r ≤ EqvGen r := EqvGen.rel
+
+theorem _root_.Equivalence.eqvGen_le (h : Equivalence r₂) (hle : r₁ ≤ r₂) : EqvGen r₁ ≤ r₂ :=
+  have := h.isEquiv
+  EqvGen.eqvGen_le hle
 
 attribute [scoped grind →] ReflGen.to_eqvGen TransGen.to_eqvGen ReflTransGen.to_eqvGen
   SymmGen.to_eqvGen
 
+theorem Join.single [Std.Refl r] (h : r a b) : Join r a b := ⟨b, h, refl b⟩
+
+@[simp] theorem hJoin_eq_join : HJoin r r = Join r := rfl
+
+@[grind =] theorem hJoin_eq_comp_swap : HJoin r₁ r₂ = Comp r₁ (swap r₂) := rfl
+
+instance [Std.Refl r₁] [Std.Refl r₂] : Std.Refl (HJoin r₁ r₂) where
+  refl a := ⟨a, refl a, refl a⟩
+
+theorem HJoin.single_left [Std.Refl r₂] (h : r₁ a b) : HJoin r₁ r₂ a b := ⟨b, h, refl b⟩
+
+theorem HJoin.single_right [Std.Refl r₁] (h : r₂ a b) : HJoin r₁ r₂ b a := ⟨b, refl b, h⟩
+
+theorem HJoin.hJoin_le [IsTrans α r] (h₁ : r₁ ≤ r) (h₂ : swap r₂ ≤ r) : HJoin r₁ r₂ ≤ r :=
+  (comp_le_comp h₁ h₂).trans (comp_self_le r)
+
+theorem HJoin.swap_iff {a b : α} : HJoin r₁ r₂ b a ↔ HJoin r₂ r₁ a b := by grind [HJoin]
+
 @[deprecated _root_.refl (since := "2026-09-07")]
 theorem MJoin.refl (a : α) : MJoin r a a := _root_.refl a
 
-theorem MJoin.single (h : ReflTransGen r a b) : MJoin r a b := by
-  use b
+@[deprecated Join.single (since := "2026-09-07")]
+theorem MJoin.single (h : ReflTransGen r a b) : MJoin r a b := Join.single h
+
+theorem _root_.Equivalence.mJoin_le (h : Equivalence r₂) (hle : r₁ ≤ r₂) :
+    MJoin r₁ ≤ r₂ :=
+  have := h.isEquiv
+  join_le_of_equivalence_of_le h <| reflTransGen_le_of_le hle
+
+theorem MJoin.mJoin_le_eqvGen : MJoin r ≤ EqvGen r :=
+    (EqvGen.is_equivalence r).mJoin_le EqvGen.le_eqvGen
+
+theorem mHJoin_eq_mJoin : MHJoin r r = MJoin r := rfl
+
+theorem MHJoin.mHJoin_le [Std.Refl r] [IsTrans α r] (h₁ : r₁ ≤ r) (h₂ : swap r₂ ≤ r) :
+    MHJoin r₁ r₂ ≤ r := by
+  refine HJoin.hJoin_le ?_ (ReflTransGen.swap.trans ?_)
+    <;> apply reflTransGen_le_of_le <;> assumption
+
+theorem MHJoin.mHJoin_le_of_isEquiv [IsEquiv α r] (h₁ : r₁ ≤ r) (h₂ : r₂ ≤ r) :
+    MHJoin r₁ r₂ ≤ r := mHJoin_le h₁ (by rwa [swap_le_iff_le_swap, Std.Symm.swap_eq])
+
+theorem _root_.Equivalence.mHJoin_le (h : Equivalence r) (h₁ : r₁ ≤ r) (h₂ : r₂ ≤ r) :
+    MHJoin r₁ r₂ ≤ r :=
+  have := h.isEquiv
+  MHJoin.mHJoin_le_of_isEquiv h₁ h₂
 
 /-- If a relation is squeezed by a relation and its multi-step closure, they are multi-step equal -/
 theorem reflTransGen_mono_closed (h₁ : r₁ ≤ r₂) (h₂ : r₂ ≤ ReflTransGen r₁) :
