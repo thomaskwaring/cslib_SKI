@@ -214,11 +214,11 @@ theorem isBool_injective (x y : SKI) (u v : Bool) (hx : IsBool u x) (hy : IsBool
   have h : MJoin Red (if u then S else K) (if v then S else K) := by
     apply mJoin_red_equivalence.trans (y := x ⬝ S ⬝ K)
     · apply mJoin_red_equivalence.symm
-      apply Relation.MJoin.single
+      apply Relation.Join.single
       exact hx S K
     · apply mJoin_red_equivalence.trans (y := y ⬝ S ⬝ K)
       · exact mJoin_red_head K <| mJoin_red_head S hxy
-      · apply Relation.MJoin.single
+      · apply Relation.Join.single
         exact hy S K
   grind [sk_nequiv, mJoin_red_equivalence.symm h]
 
@@ -254,11 +254,11 @@ theorem isChurch_injective (x y : SKI) (n m : Nat) (hx : IsChurch n x) (hy : IsC
     exact eq_of_mJoin_red_redexFree this (churchK_redexFree n) (churchK_redexFree m)
   apply mJoin_red_equivalence.trans (y := x ⬝ K ⬝ K)
   · simp_rw [churchK_church]
-    exact mJoin_red_equivalence.symm <| Relation.MJoin.single (hx K K)
+    exact mJoin_red_equivalence.symm <| Relation.Join.single (hx K K)
   · apply mJoin_red_equivalence.trans (y := y ⬝ K ⬝ K)
     · apply mJoin_red_head; apply mJoin_red_head; assumption
     · simp_rw [churchK_church]
-      exact Relation.MJoin.single (hy K K)
+      exact Relation.Join.single (hy K K)
 
 /--
 **Rice's theorem**: no SKI term is a non-trivial predicate.

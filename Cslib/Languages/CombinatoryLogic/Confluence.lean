@@ -217,8 +217,8 @@ theorem mJoin_red_equivalence : Equivalence (MJoin Red) := by
 theorem MRed.diamond : Confluent Red := by
   intro a b c hab hac
   apply mJoin_red_equivalence.trans (y := a)
-  · exact mJoin_red_equivalence.symm (MJoin.single hab)
-  · exact MJoin.single hac
+  · exact mJoin_red_equivalence.symm (Join.single hab)
+  · exact Join.single hac
 
 end SKI
 
