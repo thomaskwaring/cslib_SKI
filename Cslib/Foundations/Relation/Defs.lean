@@ -56,7 +56,7 @@ abbrev Diamond (r : α → α → Prop) := ∀ {a b c : α}, r a b → r a c →
 
 /-- Generalization of `Diamond` to two relations. -/
 def DiamondCommute (r₁ r₂ : α → α → Prop) :=
-  ∀ {x y₁ y₂}, r₁ x y₁ → r₂ x y₂ → HJoin r₁ r₂ y₁ y₂
+  ∀ {x y₁ y₂}, r₁ x y₁ → r₂ x y₂ → HJoin r₂ r₁ y₁ y₂
 
 /-- A relation is confluent when its reflexive transitive closure has the diamond property. -/
 abbrev Confluent (r : α → α → Prop) := Diamond (ReflTransGen r)
@@ -67,7 +67,10 @@ abbrev Commute (r₁ r₂ : α → α → Prop) := DiamondCommute (ReflTransGen 
 /-- A relation is semi-confluent when single and multiple steps with common origin
   are multi-joinable. -/
 abbrev SemiConfluent (r : α → α → Prop) :=
-  ∀ {x y₁ y₂}, ReflTransGen r x y₂ → r x y₁ → MJoin r y₁ y₂
+  ∀ {x y₁ y₂}, r x y₁ → ReflTransGen r x y₂ → MJoin r y₁ y₂
+
+abbrev SemiCommute (r₁ r₂ : α → α → Prop) :=
+  ∀ {x y₁ y₂}, r₁ x y₁ → ReflTransGen r₂ x y₂ → MHJoin r₂ r₁ y₁ y₂
 
 /-- A relation has the Church Rosser property when equivalence implies multi-joinability. -/
 abbrev ChurchRosser (r : α → α → Prop) := ∀ {x y}, EqvGen r x y → MJoin r x y
@@ -78,7 +81,7 @@ abbrev LocallyConfluent (r : α → α → Prop) :=
 
 /-- Generalization of `LocallyConfluent` to two relations. -/
 def LocallyCommute (r₁ r₂ : α → α → Prop) :=
-  ∀ {a b c : α}, r₁ a b → r₂ a c → MHJoin r₁ r₂ b c
+  ∀ {a b c : α}, r₁ a b → r₂ a c → MHJoin r₂ r₁ b c
 
 /-- A relation is strongly confluent when single steps are reflexive- and multi-joinable. -/
 abbrev StronglyConfluent (r : α → α → Prop) :=

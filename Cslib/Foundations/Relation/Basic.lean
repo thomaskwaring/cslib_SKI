@@ -71,6 +71,8 @@ theorem SymmGen.le_symmGen : r ≤ SymmGen r := fun _ _ => Or.inl
 theorem SymmGen.to_eqvGen (h : SymmGen r a b) : EqvGen r a b :=
   EqvGen.symmGen_le_eqvGen r _ _ h
 
+theorem symmGen_eq_sup_swap : SymmGen r = r ⊔ Function.swap r := rfl
+
 theorem EqvGen.le_eqvGen : r ≤ EqvGen r := EqvGen.rel
 
 theorem _root_.Equivalence.eqvGen_le (h : Equivalence r₂) (hle : r₁ ≤ r₂) : EqvGen r₁ ≤ r₂ :=
@@ -112,7 +114,7 @@ theorem _root_.Equivalence.mJoin_le (h : Equivalence r₂) (hle : r₁ ≤ r₂)
 theorem MJoin.mJoin_le_eqvGen : MJoin r ≤ EqvGen r :=
     (EqvGen.is_equivalence r).mJoin_le EqvGen.le_eqvGen
 
-theorem mHJoin_eq_mJoin : MHJoin r r = MJoin r := rfl
+@[simp] theorem mHJoin_eq_mJoin : MHJoin r r = MJoin r := rfl
 
 theorem MHJoin.mHJoin_le [Std.Refl r] [IsTrans α r] (h₁ : r₁ ≤ r) (h₂ : swap r₂ ≤ r) :
     MHJoin r₁ r₂ ≤ r := by
@@ -127,6 +129,13 @@ theorem _root_.Equivalence.mHJoin_le (h : Equivalence r) (h₁ : r₁ ≤ r) (h�
   have := h.isEquiv
   MHJoin.mHJoin_le_of_isEquiv h₁ h₂
 
+theorem MHJoin.swap_iff : MHJoin r₁ r₂ b a ↔ MHJoin r₂ r₁ a b := HJoin.swap_iff
+
+theorem MHJoin.left_le : r₁ ≤ MHJoin r₁ r₂ := fun _ _ h => HJoin.single_left (.single h)
+
+theorem MHJoin.swap_right_le : swap r₂ ≤ MHJoin r₁ r₂ :=
+    fun _ _ h => HJoin.single_right (.single h)
+
 /-- If a relation is squeezed by a relation and its multi-step closure, they are multi-step equal -/
 theorem reflTransGen_mono_closed (h₁ : r₁ ≤ r₂) (h₂ : r₂ ≤ ReflTransGen r₁) :
     ReflTransGen r₁ = ReflTransGen r₂ := by
@@ -139,5 +148,21 @@ lemma ReflGen.symmGen_symm : ReflGen (SymmGen r) a b → ReflGen (SymmGen r) b a
 
 @[simp, grind =]
 theorem reflTransGen_symmGen : ReflTransGen (SymmGen r) = EqvGen r := EqvGen.reflTransGen_symmGen r
+
+@[scoped grind <=]
+theorem join_inl (r₁_ab : r₁ a b) : (r₁ ⊔ r₂) a b :=
+  Or.inl r₁_ab
+
+@[scoped grind <=]
+theorem join_inr (r₂_ab : r₂ a b) : (r₁ ⊔ r₂) a b :=
+  Or.inr r₂_ab
+
+@[scoped grind <=]
+theorem join_inl_reflTransGen (r₁_ab : ReflTransGen r₁ a b) : ReflTransGen (r₁ ⊔ r₂) a b :=
+  ReflTransGen.mono le_sup_left _ _ r₁_ab
+
+@[scoped grind <=]
+theorem join_inr_reflTransGen (r₂_ab : ReflTransGen r₂ a b) : ReflTransGen (r₁ ⊔ r₂) a b :=
+  ReflTransGen.mono le_sup_right _ _ r₂_ab
 
 end Relation
