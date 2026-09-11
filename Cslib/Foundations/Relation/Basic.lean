@@ -48,7 +48,7 @@ def transLeft (s r : α → α → Prop) [IsTrans α r] (h : s ≤ r) : Trans s 
 def transRight (s r : α → α → Prop) [IsTrans α r] (h : s ≤ r) : Trans r s r where
   trans hab hbc := _root_.trans hab (h _ _ hbc)
 
-@[grind .]
+@[scoped grind .]
 theorem comp_le_comp {s s' r r' : α → α → Prop} (hs : s ≤ s') (hr : r ≤ r') :
     Comp s r ≤ Comp s' r' := fun a c ⟨b, hab, hbc⟩ ↦ ⟨b, hs a b hab, hr b c hbc⟩
 
@@ -60,13 +60,13 @@ theorem swap_le_iff_le_swap {r₁ r₂ : α → α → Prop} : swap r₁ ≤ r�
 
 attribute [scoped grind] ReflGen TransGen ReflTransGen EqvGen
 
-@[grind .]
+@[scoped grind .]
 theorem ReflGen.le_reflGen : r ≤ ReflGen r := fun _ _ => ReflGen.single
 
 theorem ReflGen.to_eqvGen (h : ReflGen r a b) : EqvGen r a b :=
   EqvGen.reflGen_le_eqvGen r _ _ h
 
-@[grind .]
+@[scoped grind .]
 theorem TransGen.le_transGen : r ≤ TransGen r := fun _ _ => TransGen.single
 
 theorem TransGen.to_eqvGen (h : TransGen r a b) : EqvGen r a b :=
@@ -75,15 +75,15 @@ theorem TransGen.to_eqvGen (h : TransGen r a b) : EqvGen r a b :=
 theorem ReflTransGen.to_eqvGen (h : ReflTransGen r a b) : EqvGen r a b :=
   EqvGen.reflTransGen_le_eqvGen r _ _ h
 
-@[grind .]
+@[scoped grind .]
 theorem SymmGen.le_symmGen : r ≤ SymmGen r := fun _ _ => Or.inl
 
 theorem SymmGen.to_eqvGen (h : SymmGen r a b) : EqvGen r a b :=
   EqvGen.symmGen_le_eqvGen r _ _ h
 
-@[simp, grind =] theorem sup_swap_eq_symmGen : r ⊔ Function.swap r = SymmGen r := rfl
+@[simp, scoped grind =] theorem sup_swap_eq_symmGen : r ⊔ Function.swap r = SymmGen r := rfl
 
-@[grind .]
+@[scoped grind .]
 theorem EqvGen.le_eqvGen : r ≤ EqvGen r := EqvGen.rel
 
 theorem _root_.Equivalence.eqvGen_le (h : Equivalence r₂) (hle : r₁ ≤ r₂) : EqvGen r₁ ≤ r₂ :=
@@ -95,7 +95,7 @@ attribute [scoped grind →] ReflGen.to_eqvGen TransGen.to_eqvGen ReflTransGen.t
 
 theorem Join.single [Std.Refl r] (h : r a b) : Join r a b := ⟨b, h, refl b⟩
 
-@[simp, grind =] theorem join₂_eq_join : Join₂ r r = Join r := rfl
+@[simp, scoped grind =] theorem join₂_eq_join : Join₂ r r = Join r := rfl
 
 @[grind =] theorem join₂_eq_comp_swap : Join₂ r₁ r₂ = Comp r₁ (swap r₂) := rfl
 
@@ -157,7 +157,7 @@ theorem reflTransGen_mono_closed (h₁ : r₁ ≤ r₂) (h₂ : r₂ ≤ ReflTra
 lemma ReflGen.symmGen_symm : ReflGen (SymmGen r) a b → ReflGen (SymmGen r) b a :=
   Std.Symm.symm a b
 
-@[simp, grind =]
+@[simp, scoped grind =]
 theorem reflTransGen_symmGen : ReflTransGen (SymmGen r) = EqvGen r := EqvGen.reflTransGen_symmGen r
 
 @[scoped grind <=]
