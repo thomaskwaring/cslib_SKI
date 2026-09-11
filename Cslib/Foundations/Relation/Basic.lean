@@ -9,7 +9,13 @@ module
 public import Cslib.Foundations.Relation.Defs
 public import Mathlib.Order.WellFounded
 
-/-! # Basic properties of relations -/
+/-! # Basic properties of relations
+
+## TODO:
+Many of the results here could be upstreamed to Mathlib. In particular:
+- `ReflGen.le_reflGen` and relatives,
+- `ReflGen.to_eqvGen` and relatives.
+-/
 
 @[expose] public section
 
