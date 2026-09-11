@@ -90,21 +90,21 @@ attribute [scoped grind →] ReflGen.to_eqvGen TransGen.to_eqvGen ReflTransGen.t
 
 theorem Join.single [Std.Refl r] (h : r a b) : Join r a b := ⟨b, h, refl b⟩
 
-@[simp] theorem hJoin_eq_join : HJoin r r = Join r := rfl
+@[simp] theorem join₂_eq_join : Join₂ r r = Join r := rfl
 
-@[grind =] theorem hJoin_eq_comp_swap : HJoin r₁ r₂ = Comp r₁ (swap r₂) := rfl
+@[grind =] theorem join₂_eq_comp_swap : Join₂ r₁ r₂ = Comp r₁ (swap r₂) := rfl
 
-instance [Std.Refl r₁] [Std.Refl r₂] : Std.Refl (HJoin r₁ r₂) where
+instance [Std.Refl r₁] [Std.Refl r₂] : Std.Refl (Join₂ r₁ r₂) where
   refl a := ⟨a, refl a, refl a⟩
 
-theorem HJoin.single_left [Std.Refl r₂] (h : r₁ a b) : HJoin r₁ r₂ a b := ⟨b, h, refl b⟩
+theorem Join₂.single_left [Std.Refl r₂] (h : r₁ a b) : Join₂ r₁ r₂ a b := ⟨b, h, refl b⟩
 
-theorem HJoin.single_right [Std.Refl r₁] (h : r₂ a b) : HJoin r₁ r₂ b a := ⟨b, refl b, h⟩
+theorem Join₂.single_right [Std.Refl r₁] (h : r₂ a b) : Join₂ r₁ r₂ b a := ⟨b, refl b, h⟩
 
-theorem HJoin.hJoin_le [IsTrans α r] (h₁ : r₁ ≤ r) (h₂ : swap r₂ ≤ r) : HJoin r₁ r₂ ≤ r :=
+theorem Join₂.join₂_le [IsTrans α r] (h₁ : r₁ ≤ r) (h₂ : swap r₂ ≤ r) : Join₂ r₁ r₂ ≤ r :=
   (comp_le_comp h₁ h₂).trans (comp_self_le r)
 
-theorem HJoin.swap_iff {a b : α} : HJoin r₁ r₂ b a ↔ HJoin r₂ r₁ a b := by grind [HJoin]
+theorem Join₂.swap_iff {a b : α} : Join₂ r₁ r₂ b a ↔ Join₂ r₂ r₁ a b := by grind [Join₂]
 
 @[deprecated _root_.refl (since := "2026-09-07")]
 theorem MJoin.refl (a : α) : MJoin r a a := _root_.refl a
@@ -120,27 +120,27 @@ theorem _root_.Equivalence.mJoin_le (h : Equivalence r₂) (hle : r₁ ≤ r₂)
 theorem MJoin.mJoin_le_eqvGen : MJoin r ≤ EqvGen r :=
     (EqvGen.is_equivalence r).mJoin_le EqvGen.le_eqvGen
 
-theorem mHJoin_eq_mJoin : MHJoin r r = MJoin r := rfl
+theorem mJoin₂_eq_mJoin : MJoin₂ r r = MJoin r := rfl
 
-theorem MHJoin.mHJoin_le [Std.Refl r] [IsTrans α r] (h₁ : r₁ ≤ r) (h₂ : swap r₂ ≤ r) :
-    MHJoin r₁ r₂ ≤ r := by
-  refine HJoin.hJoin_le ?_ (ReflTransGen.swap.trans ?_)
+theorem MJoin₂.mJoin₂_le [Std.Refl r] [IsTrans α r] (h₁ : r₁ ≤ r) (h₂ : swap r₂ ≤ r) :
+    MJoin₂ r₁ r₂ ≤ r := by
+  refine Join₂.join₂_le ?_ (ReflTransGen.swap.trans ?_)
     <;> apply reflTransGen_le_of_le <;> assumption
 
-theorem MHJoin.mHJoin_le_of_isEquiv [IsEquiv α r] (h₁ : r₁ ≤ r) (h₂ : r₂ ≤ r) :
-    MHJoin r₁ r₂ ≤ r := mHJoin_le h₁ (by rwa [swap_le_iff_le_swap, Std.Symm.swap_eq])
+theorem MJoin₂.mJoin₂_le_of_isEquiv [IsEquiv α r] (h₁ : r₁ ≤ r) (h₂ : r₂ ≤ r) :
+    MJoin₂ r₁ r₂ ≤ r := mJoin₂_le h₁ (by rwa [swap_le_iff_le_swap, Std.Symm.swap_eq])
 
-theorem _root_.Equivalence.mHJoin_le (h : Equivalence r) (h₁ : r₁ ≤ r) (h₂ : r₂ ≤ r) :
-    MHJoin r₁ r₂ ≤ r :=
+theorem _root_.Equivalence.mJoin₂_le (h : Equivalence r) (h₁ : r₁ ≤ r) (h₂ : r₂ ≤ r) :
+    MJoin₂ r₁ r₂ ≤ r :=
   have := h.isEquiv
-  MHJoin.mHJoin_le_of_isEquiv h₁ h₂
+  MJoin₂.mJoin₂_le_of_isEquiv h₁ h₂
 
-theorem MHJoin.swap_iff : MHJoin r₁ r₂ b a ↔ MHJoin r₂ r₁ a b := HJoin.swap_iff
+theorem MJoin₂.swap_iff : MJoin₂ r₁ r₂ b a ↔ MJoin₂ r₂ r₁ a b := Join₂.swap_iff
 
-theorem MHJoin.left_le : r₁ ≤ MHJoin r₁ r₂ := fun _ _ h => HJoin.single_left (.single h)
+theorem MJoin₂.left_le : r₁ ≤ MJoin₂ r₁ r₂ := fun _ _ h => Join₂.single_left (.single h)
 
-theorem MHJoin.swap_right_le : swap r₂ ≤ MHJoin r₁ r₂ :=
-    fun _ _ h => HJoin.single_right (.single h)
+theorem MJoin₂.swap_right_le : swap r₂ ≤ MJoin₂ r₁ r₂ :=
+    fun _ _ h => Join₂.single_right (.single h)
 
 /-- If a relation is squeezed by a relation and its multi-step closure, they are multi-step equal -/
 theorem reflTransGen_mono_closed (h₁ : r₁ ≤ r₂) (h₂ : r₂ ≤ ReflTransGen r₁) :

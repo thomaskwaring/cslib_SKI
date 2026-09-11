@@ -53,12 +53,12 @@ theorem Commute.to_confluent : Commute r r = Confluent r := rfl
 @[simp] theorem LocallyCommute.to_locallyConfluent : LocallyCommute r r = LocallyConfluent r := rfl
 
 instance : Std.Symm (@Commute α) where
-  symm r₁ r₂ h x y₁ y₂ x_y₁ x_y₂ := by grind [h x_y₂ x_y₁, HJoin]
+  symm r₁ r₂ h x y₁ y₂ x_y₁ x_y₂ := by grind [h x_y₂ x_y₁, Join₂]
 
 lemma DiamondCommute.extend (h : DiamondCommute r₁ r₂) (h₁ : ReflTransGen r₁ a b) (h₂ : r₂ a c) :
-    MHJoin r₂ r₁ b c := by
+    MJoin₂ r₂ r₁ b c := by
   induction h₁ using ReflTransGen.head_induction_on generalizing c with
-  | refl => exact HJoin.single_left (.single h₂)
+  | refl => exact Join₂.single_left (.single h₂)
   | head ha _ ih =>
     obtain ⟨d, had, hcd⟩ := h ha h₂
     obtain ⟨d', hbd', hdd'⟩ := ih had
@@ -71,7 +71,7 @@ lemma Diamond.extend (h : Diamond r) :
 lemma DiamondCommute.to_commute (h : DiamondCommute r₁ r₂) : Commute r₁ r₂ := by
   intro a b₁ b₂ hab₁ hab₂
   induction hab₂ using ReflTransGen.head_induction_on generalizing b₁ with
-  | refl => exact HJoin.single_right hab₁
+  | refl => exact Join₂.single_right hab₁
   | @head a a' ha hab₂ ih =>
     obtain ⟨c, hb₁c, hac⟩ := h.extend hab₁ ha
     obtain ⟨d, hcd, hb₂d⟩ := ih hac
@@ -82,13 +82,13 @@ theorem Diamond.to_confluent (h : Diamond r) : Confluent r := DiamondCommute.to_
 
 @[deprecated (since := "2026-09-03")] alias Diamond.toConfluent := Diamond.to_confluent
 
-theorem Commute.isTrans_mHJoin (h : Commute r₁ r₂) : IsTrans α (MHJoin r₁ r₂) where
+theorem Commute.isTrans_mJoin₂ (h : Commute r₁ r₂) : IsTrans α (MJoin₂ r₁ r₂) where
   trans a b c := by
     intro ⟨d, had, hbd⟩ ⟨d', hbd', hcd'⟩
     obtain ⟨e, he, he'⟩ := h hbd' hbd
     exact ⟨e, had.trans he', hcd'.trans he⟩
 
-theorem Confluent.isTrans_mJoin (h : Confluent r) : IsTrans α (MJoin r) := Commute.isTrans_mHJoin h
+theorem Confluent.isTrans_mJoin (h : Confluent r) : IsTrans α (MJoin r) := Commute.isTrans_mJoin₂ h
 
 theorem SemiCommute.to_commute (h : SemiCommute r₁ r₂) : Commute r₁ r₂ := by
   intro a b₁ b₂ hab₁ hab₂
@@ -104,17 +104,17 @@ theorem SemiConfluent.to_confluent (h : SemiConfluent r) : Confluent r := SemiCo
 @[deprecated (since := "2026-09-03")] alias SemiConfluent.toConfluent := SemiConfluent.to_confluent
 
 theorem commute_equivalents :
-    [SemiCommute r₁ r₂, Commute r₁ r₂, IsTrans α (MHJoin r₁ r₂),
-      ReflTransGen (r₁ ⊔ swap r₂) ≤ MHJoin r₁ r₂,
-      ReflTransGen (r₁ ⊔ swap r₂) = MHJoin r₁ r₂].TFAE := by
+    [SemiCommute r₁ r₂, Commute r₁ r₂, IsTrans α (MJoin₂ r₁ r₂),
+      ReflTransGen (r₁ ⊔ swap r₂) ≤ MJoin₂ r₁ r₂,
+      ReflTransGen (r₁ ⊔ swap r₂) = MJoin₂ r₁ r₂].TFAE := by
   tfae_have 1 → 2 := SemiCommute.to_commute
-  tfae_have 2 → 3 := Commute.isTrans_mHJoin
-  tfae_have 3 → 4 := fun h => reflTransGen_le_of_le <| sup_le MHJoin.left_le MHJoin.swap_right_le
+  tfae_have 2 → 3 := Commute.isTrans_mJoin₂
+  tfae_have 3 → 4 := fun h => reflTransGen_le_of_le <| sup_le MJoin₂.left_le MJoin₂.swap_right_le
   tfae_have 4 → 5 := fun h => h.antisymm <|
-    MHJoin.mHJoin_le (le_sup_left.trans le_reflTransGen) (le_sup_right.trans le_reflTransGen)
+    MJoin₂.mJoin₂_le (le_sup_left.trans le_reflTransGen) (le_sup_right.trans le_reflTransGen)
   tfae_have 5 → 1 := by
     intro h a b₁ b₂ h₁ h₂
-    rw [MHJoin.swap_iff, ← h]
+    rw [MJoin₂.swap_iff, ← h]
     exact (ReflTransGen.mono le_sup_right _ _ <| reflTransGen_swap.mpr h₂).tail (Or.inl h₁)
   tfae_finish
 
@@ -275,16 +275,16 @@ theorem StronglyConfluent.to_confluent (h : StronglyConfluent r) : Confluent r :
 lemma Commute.join_left (c₁ : Commute r₁ r₃) (c₂ : Commute r₂ r₃) : Commute (r₁ ⊔ r₂) r₃ := by
   intro x y z xy xz
   induction xy with
-  | refl => grind [HJoin]
+  | refl => grind [Join₂]
   | @tail b c _ bc ih =>
     have ⟨w, bw, _⟩ := ih
     cases bc with
     | inl bc =>
       obtain ⟨_, _, _⟩ := c₁ (.single bc) bw
-      grind [HJoin, ReflTransGen.trans]
+      grind [Join₂, ReflTransGen.trans]
     | inr bc =>
       obtain ⟨_, _, _⟩ := c₂ (.single bc) bw
-      grind [HJoin, ReflTransGen.trans]
+      grind [Join₂, ReflTransGen.trans]
 
 theorem Commute.join_confluent (c₁ : Confluent r₁) (c₂ : Confluent r₂) (comm : Commute r₁ r₂) :
     Confluent (r₁ ⊔ r₂) := by
