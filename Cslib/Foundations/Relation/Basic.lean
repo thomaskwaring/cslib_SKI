@@ -97,7 +97,7 @@ theorem Join.single [Std.Refl r] (h : r a b) : Join r a b := ⟨b, h, refl b⟩
 
 @[simp, scoped grind =] theorem join₂_eq_join : Join₂ r r = Join r := rfl
 
-@[grind =] theorem join₂_eq_comp_swap : Join₂ r₁ r₂ = Comp r₁ (swap r₂) := rfl
+theorem join₂_eq_comp_swap : Join₂ r₁ r₂ = Comp r₁ (swap r₂) := rfl
 
 instance [Std.Refl r₁] [Std.Refl r₂] : Std.Refl (Join₂ r₁ r₂) where
   refl a := ⟨a, refl a, refl a⟩

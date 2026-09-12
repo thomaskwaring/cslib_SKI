@@ -57,7 +57,7 @@ def Preserves (r : α → α → Prop) (P : α → Prop) : Prop := ∀ ⦃a b⦄
 abbrev Diamond (r : α → α → Prop) := ∀ {a b c : α}, r a b → r a c → Join r b c
 
 /-- Generalization of `Diamond` to two relations. -/
-def DiamondCommute (r₁ r₂ : α → α → Prop) :=
+abbrev DiamondCommute (r₁ r₂ : α → α → Prop) :=
   ∀ {x y₁ y₂}, r₁ x y₁ → r₂ x y₂ → Join₂ r₂ r₁ y₁ y₂
 
 /-- A relation is confluent when its reflexive transitive closure has the diamond property. -/
