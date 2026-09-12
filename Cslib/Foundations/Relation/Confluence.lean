@@ -55,37 +55,24 @@ theorem Commute.to_confluent : Commute r r = Confluent r := rfl
 instance : Std.Symm (@Commute α) where
   symm r₁ r₂ h x y₁ y₂ x_y₁ x_y₂ := by grind [h x_y₂ x_y₁, Join₂]
 
-lemma DiamondCommute.diamond_commute_reflTransGen_left (h : DiamondCommute r₁ r₂) :
-    DiamondCommute (ReflTransGen r₁) r₂ := by
+lemma DiamondCommute.diamond_commute_reflTransGen_right (h : DiamondCommute r₁ r₂) :
+    DiamondCommute r₁ (ReflTransGen r₂) := by
   intro a b c h₁ h₂
-  induction h₁ using ReflTransGen.head_induction_on generalizing c with
-  | refl => exact Join₂.single_left h₂
+  induction h₂ using ReflTransGen.head_induction_on generalizing b with
+  | refl => exact Join₂.single_right h₁
   | head ha _ ih =>
-    obtain ⟨d, had, hcd⟩ := h ha h₂
-    obtain ⟨d', hbd', hdd'⟩ := ih had
-    exact ⟨d', hbd', hdd'.head hcd⟩
+    obtain ⟨d, hbd, hcd⟩ := h h₁ ha
+    obtain ⟨d', hdd', hcd'⟩ := ih hcd
+    exact ⟨d', hdd'.head hbd, hcd'⟩
 
-lemma DiamondCommute.extend (h : DiamondCommute r₁ r₂) (h₁ : ReflTransGen r₁ a b) (h₂ : r₂ a c) :
-    Join₂ (ReflTransGen r₂) (ReflTransGen r₁) b c :=
-  Join₂.mono ReflTransGen.le_reflTransGen le_rfl _ _ <| h.diamond_commute_reflTransGen_left h₁ h₂
+lemma DiamondCommute.to_semiCommute (h : DiamondCommute r₁ r₂) : SemiCommute r₁ r₂ :=
+  fun h₁ h₂ => Join₂.mono le_rfl ReflTransGen.le_reflTransGen _ _ <|
+    h.diamond_commute_reflTransGen_right h₁ h₂
 
 /-- Extending a multistep reduction by a single step preserves multi-joinability. -/
-lemma Diamond.extend (h : Diamond r) :
-    ReflTransGen r a b → r a c → Join (ReflTransGen r) b c := DiamondCommute.extend h
+lemma Diamond.to_semiConfluent (h : Diamond r) : SemiConfluent r := DiamondCommute.to_semiCommute h
 
-lemma DiamondCommute.to_commute (h : DiamondCommute r₁ r₂) : Commute r₁ r₂ := by
-  intro a b₁ b₂ hab₁ hab₂
-  induction hab₂ using ReflTransGen.head_induction_on generalizing b₁ with
-  | refl => exact Join₂.single_right hab₁
-  | @head a a' ha hab₂ ih =>
-    obtain ⟨c, hb₁c, hac⟩ := h.extend hab₁ ha
-    obtain ⟨d, hcd, hb₂d⟩ := ih hac
-    exact ⟨d, hb₁c.trans hcd, hb₂d⟩
-
-/-- The diamond property implies confluence. -/
-theorem Diamond.to_confluent (h : Diamond r) : Confluent r := DiamondCommute.to_commute h
-
-@[deprecated (since := "2026-09-03")] alias Diamond.toConfluent := Diamond.to_confluent
+@[deprecated (since := "2026-09-12")] alias Diamond.extend := Diamond.to_semiConfluent
 
 theorem Commute.isTrans_join₂_reflTransGen (h : Commute r₁ r₂) :
     IsTrans α (Join₂ (ReflTransGen r₁) (ReflTransGen r₂)) where
@@ -126,6 +113,11 @@ theorem commute_equivalents :
     exact (ReflTransGen.mono le_sup_right _ _ <| reflTransGen_swap.mpr h₂).tail (Or.inl h₁)
   tfae_finish
 
+theorem semiCommute_iff_commute : SemiCommute r₁ r₂ ↔ Commute r₁ r₂ := commute_equivalents.out 1 2
+
+theorem DiamondCommute.to_commute (h : DiamondCommute r₁ r₂) : Commute r₁ r₂ :=
+  semiCommute_iff_commute.mp h.to_semiCommute
+
 theorem churchRosser_iff_eqvGen_le_join_reflTransGen :
     ChurchRosser r ↔ EqvGen r ≤ Join (ReflTransGen r) :=
   Iff.rfl
@@ -157,6 +149,10 @@ theorem confluent_iff_semiConfluent : Confluent r ↔ SemiConfluent r :=
 
 @[deprecated (since := "2026-09-03")] alias Confluent_iff_SemiConfluent :=
   confluent_iff_semiConfluent
+
+theorem Diamond.to_confluent (h : Diamond r) : Confluent r := DiamondCommute.to_commute h
+
+@[deprecated (since := "2026-09-03")] alias Diamond.toConfluent := Diamond.to_confluent
 
 theorem confluent_of_unique_end {x : α} (h : ∀ y : α, ReflTransGen r y x) : Confluent r := by
   intro a b c hab hac
