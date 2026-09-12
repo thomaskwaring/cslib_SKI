@@ -111,10 +111,10 @@ theorem Join₂.join₂_le [IsTrans α r] (h₁ : r₁ ≤ r) (h₂ : swap r₂ 
 
 theorem Join₂.swap_iff {a b : α} : Join₂ r₁ r₂ b a ↔ Join₂ r₂ r₁ a b := by grind [Join₂]
 
-@[deprecated _root_.refl (since := "2026-09-07")]
+@[deprecated _root_.refl +typeChanged (since := "2026-09-07")]
 theorem MJoin.refl (a : α) : MJoin r a a := _root_.refl a
 
-@[deprecated Join.single (since := "2026-09-07")]
+@[deprecated Join.single +typeChanged (since := "2026-09-07")]
 theorem MJoin.single (h : ReflTransGen r a b) : MJoin r a b := Join.single h
 
 theorem _root_.Equivalence.mJoin_le (h : Equivalence r₂) (hle : r₁ ≤ r₂) :
@@ -153,7 +153,7 @@ theorem reflTransGen_mono_closed (h₁ : r₁ ≤ r₂) (h₂ : r₂ ≤ ReflTra
   ext a b
   exact ⟨ReflTransGen.mono h₁ a b, reflTransGen_closed h₂ a b⟩
 
-@[deprecated Relation.ReflGen.stdSymm (since := "2026-09-03")]
+@[deprecated Relation.ReflGen.stdSymm +typeChanged (since := "2026-09-03")]
 lemma ReflGen.symmGen_symm : ReflGen (SymmGen r) a b → ReflGen (SymmGen r) b a :=
   Std.Symm.symm a b
 
