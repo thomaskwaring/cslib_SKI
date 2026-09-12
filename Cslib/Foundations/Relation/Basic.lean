@@ -111,6 +111,9 @@ theorem Join₂.join₂_le [IsTrans α r] (h₁ : r₁ ≤ r) (h₂ : swap r₂ 
 
 theorem Join₂.swap_iff {a b : α} : Join₂ r₁ r₂ b a ↔ Join₂ r₂ r₁ a b := by grind [Join₂]
 
+protected theorem Join₂.mono (h₁ : r₁ ≤ r₁') (h₂ : r₂ ≤ r₂') : Join₂ r₁ r₂ ≤ Join₂ r₁' r₂' :=
+  fun x y ⟨z, hxz, hyz⟩ => ⟨z, h₁ x z hxz, h₂ y z hyz⟩
+
 @[deprecated _root_.refl +typeChanged (since := "2026-09-07")]
 theorem MJoin.refl (a : α) : MJoin r a a := _root_.refl a
 

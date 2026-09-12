@@ -55,14 +55,19 @@ theorem Commute.to_confluent : Commute r r = Confluent r := rfl
 instance : Std.Symm (@Commute α) where
   symm r₁ r₂ h x y₁ y₂ x_y₁ x_y₂ := by grind [h x_y₂ x_y₁, Join₂]
 
-lemma DiamondCommute.extend (h : DiamondCommute r₁ r₂) (h₁ : ReflTransGen r₁ a b) (h₂ : r₂ a c) :
-    Join₂ (ReflTransGen r₂) (ReflTransGen r₁) b c := by
+lemma DiamondCommute.diamond_commute_reflTransGen_left (h : DiamondCommute r₁ r₂) :
+    DiamondCommute (ReflTransGen r₁) r₂ := by
+  intro a b c h₁ h₂
   induction h₁ using ReflTransGen.head_induction_on generalizing c with
-  | refl => exact Join₂.single_left (.single h₂)
+  | refl => exact Join₂.single_left h₂
   | head ha _ ih =>
     obtain ⟨d, had, hcd⟩ := h ha h₂
     obtain ⟨d', hbd', hdd'⟩ := ih had
     exact ⟨d', hbd', hdd'.head hcd⟩
+
+lemma DiamondCommute.extend (h : DiamondCommute r₁ r₂) (h₁ : ReflTransGen r₁ a b) (h₂ : r₂ a c) :
+    Join₂ (ReflTransGen r₂) (ReflTransGen r₁) b c :=
+  Join₂.mono ReflTransGen.le_reflTransGen le_rfl _ _ <| h.diamond_commute_reflTransGen_left h₁ h₂
 
 /-- Extending a multistep reduction by a single step preserves multi-joinability. -/
 lemma Diamond.extend (h : Diamond r) :
