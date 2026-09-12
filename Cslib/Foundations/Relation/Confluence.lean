@@ -56,7 +56,7 @@ instance : Std.Symm (@Commute α) where
   symm r₁ r₂ h x y₁ y₂ x_y₁ x_y₂ := by grind [h x_y₂ x_y₁, Join₂]
 
 lemma DiamondCommute.extend (h : DiamondCommute r₁ r₂) (h₁ : ReflTransGen r₁ a b) (h₂ : r₂ a c) :
-    MJoin₂ r₂ r₁ b c := by
+    Join₂ (ReflTransGen r₂) (ReflTransGen r₁) b c := by
   induction h₁ using ReflTransGen.head_induction_on generalizing c with
   | refl => exact Join₂.single_left (.single h₂)
   | head ha _ ih =>
@@ -82,13 +82,15 @@ theorem Diamond.to_confluent (h : Diamond r) : Confluent r := DiamondCommute.to_
 
 @[deprecated (since := "2026-09-03")] alias Diamond.toConfluent := Diamond.to_confluent
 
-theorem Commute.isTrans_mJoin₂ (h : Commute r₁ r₂) : IsTrans α (MJoin₂ r₁ r₂) where
+theorem Commute.isTrans_join₂_reflTransGen (h : Commute r₁ r₂) :
+    IsTrans α (Join₂ (ReflTransGen r₁) (ReflTransGen r₂)) where
   trans a b c := by
     intro ⟨d, had, hbd⟩ ⟨d', hbd', hcd'⟩
     obtain ⟨e, he, he'⟩ := h hbd' hbd
     exact ⟨e, had.trans he', hcd'.trans he⟩
 
-theorem Confluent.isTrans_mJoin (h : Confluent r) : IsTrans α (MJoin r) := Commute.isTrans_mJoin₂ h
+theorem Confluent.isTrans_join_reflTransGen (h : Confluent r) : IsTrans α (Join (ReflTransGen r)) :=
+  Commute.isTrans_join₂_reflTransGen h
 
 theorem SemiCommute.to_commute (h : SemiCommute r₁ r₂) : Commute r₁ r₂ := by
   intro a b₁ b₂ hab₁ hab₂
@@ -104,26 +106,29 @@ theorem SemiConfluent.to_confluent (h : SemiConfluent r) : Confluent r := SemiCo
 @[deprecated (since := "2026-09-03")] alias SemiConfluent.toConfluent := SemiConfluent.to_confluent
 
 theorem commute_equivalents :
-    [SemiCommute r₁ r₂, Commute r₁ r₂, IsTrans α (MJoin₂ r₁ r₂),
-      ReflTransGen (r₁ ⊔ swap r₂) ≤ MJoin₂ r₁ r₂,
-      ReflTransGen (r₁ ⊔ swap r₂) = MJoin₂ r₁ r₂].TFAE := by
+    [SemiCommute r₁ r₂, Commute r₁ r₂, IsTrans α (Join₂ (ReflTransGen r₁) (ReflTransGen r₂)),
+      ReflTransGen (r₁ ⊔ swap r₂) ≤ Join₂ (ReflTransGen r₁) (ReflTransGen r₂),
+      ReflTransGen (r₁ ⊔ swap r₂) = Join₂ (ReflTransGen r₁) (ReflTransGen r₂)].TFAE := by
   tfae_have 1 → 2 := SemiCommute.to_commute
-  tfae_have 2 → 3 := Commute.isTrans_mJoin₂
-  tfae_have 3 → 4 := fun h => reflTransGen_le_of_le <| sup_le MJoin₂.left_le MJoin₂.swap_right_le
+  tfae_have 2 → 3 := Commute.isTrans_join₂_reflTransGen
+  tfae_have 3 → 4 := fun h => reflTransGen_le_of_le <|
+    sup_le left_le_join₂_reflTransGen swap_right_le_join₂_reflTransGen
   tfae_have 4 → 5 := fun h => h.antisymm <|
-    MJoin₂.mJoin₂_le (le_sup_left.trans le_reflTransGen) (le_sup_right.trans le_reflTransGen)
+    join₂_reflTransGen_le (le_sup_left.trans le_reflTransGen) (le_sup_right.trans le_reflTransGen)
   tfae_have 5 → 1 := by
     intro h a b₁ b₂ h₁ h₂
-    rw [MJoin₂.swap_iff, ← h]
+    rw [Join₂.swap_iff, ← h]
     exact (ReflTransGen.mono le_sup_right _ _ <| reflTransGen_swap.mpr h₂).tail (Or.inl h₁)
   tfae_finish
 
-theorem churchRosser_iff_eqvGen_le_mJoin : ChurchRosser r ↔ EqvGen r ≤ MJoin r := Iff.rfl
+theorem churchRosser_iff_eqvGen_le_join_reflTransGen :
+    ChurchRosser r ↔ EqvGen r ≤ Join (ReflTransGen r) :=
+  Iff.rfl
 
 theorem confluent_equivalents :
-    [ChurchRosser r, SemiConfluent r, Confluent r, IsTrans α (MJoin r),
-      EqvGen r ≤ MJoin r, EqvGen r = MJoin r].TFAE := by
-  refine (List.tfae_cons ?_).mpr ⟨churchRosser_iff_eqvGen_le_mJoin, ?_⟩
+    [ChurchRosser r, SemiConfluent r, Confluent r, IsTrans α (Join (ReflTransGen r)),
+      EqvGen r ≤ Join (ReflTransGen r), EqvGen r = Join (ReflTransGen r)].TFAE := by
+  refine (List.tfae_cons ?_).mpr ⟨churchRosser_iff_eqvGen_le_join_reflTransGen, ?_⟩
   · grind
   · simpa [reflTransGen_symmGen] using commute_equivalents (r₁ := r) (r₂ := r)
 

@@ -117,34 +117,32 @@ theorem MJoin.refl (a : α) : MJoin r a a := _root_.refl a
 @[deprecated Join.single +typeChanged (since := "2026-09-07")]
 theorem MJoin.single (h : ReflTransGen r a b) : MJoin r a b := Join.single h
 
-theorem _root_.Equivalence.mJoin_le (h : Equivalence r₂) (hle : r₁ ≤ r₂) :
-    MJoin r₁ ≤ r₂ :=
+theorem _root_.Equivalence.join_reflTransGen_le (h : Equivalence r₂) (hle : r₁ ≤ r₂) :
+    Join (ReflTransGen r₁) ≤ r₂ :=
   have := h.isEquiv
   join_le_of_equivalence_of_le h <| reflTransGen_le_of_le hle
 
-theorem MJoin.mJoin_le_eqvGen : MJoin r ≤ EqvGen r :=
-    (EqvGen.is_equivalence r).mJoin_le EqvGen.le_eqvGen
+theorem join_reflTransGen_le_eqvGen : Join (ReflTransGen r) ≤ EqvGen r :=
+    (EqvGen.is_equivalence r).join_reflTransGen_le EqvGen.le_eqvGen
 
-theorem mJoin₂_eq_mJoin : MJoin₂ r r = MJoin r := rfl
-
-theorem MJoin₂.mJoin₂_le [Std.Refl r] [IsTrans α r] (h₁ : r₁ ≤ r) (h₂ : swap r₂ ≤ r) :
-    MJoin₂ r₁ r₂ ≤ r := by
+theorem join₂_reflTransGen_le [Std.Refl r] [IsTrans α r] (h₁ : r₁ ≤ r) (h₂ : swap r₂ ≤ r) :
+    Join₂ (ReflTransGen r₁) (ReflTransGen r₂) ≤ r := by
   refine Join₂.join₂_le ?_ (ReflTransGen.swap.trans ?_)
     <;> apply reflTransGen_le_of_le <;> assumption
 
-theorem MJoin₂.mJoin₂_le_of_isEquiv [IsEquiv α r] (h₁ : r₁ ≤ r) (h₂ : r₂ ≤ r) :
-    MJoin₂ r₁ r₂ ≤ r := mJoin₂_le h₁ (by rwa [swap_le_iff_le_swap, Std.Symm.swap_eq])
+theorem join₂_reflTransGen_le_of_isEquiv [IsEquiv α r] (h₁ : r₁ ≤ r) (h₂ : r₂ ≤ r) :
+    Join₂ (ReflTransGen r₁) (ReflTransGen r₂) ≤ r :=
+  join₂_reflTransGen_le h₁ (by rwa [swap_le_iff_le_swap, Std.Symm.swap_eq])
 
-theorem _root_.Equivalence.mJoin₂_le (h : Equivalence r) (h₁ : r₁ ≤ r) (h₂ : r₂ ≤ r) :
-    MJoin₂ r₁ r₂ ≤ r :=
+theorem _root_.Equivalence.join₂_reflTransGen_le (h : Equivalence r) (h₁ : r₁ ≤ r) (h₂ : r₂ ≤ r) :
+    Join₂ (ReflTransGen r₁) (ReflTransGen r₂) ≤ r :=
   have := h.isEquiv
-  MJoin₂.mJoin₂_le_of_isEquiv h₁ h₂
+  join₂_reflTransGen_le_of_isEquiv h₁ h₂
 
-theorem MJoin₂.swap_iff : MJoin₂ r₁ r₂ b a ↔ MJoin₂ r₂ r₁ a b := Join₂.swap_iff
+theorem left_le_join₂_reflTransGen : r₁ ≤ Join₂ (ReflTransGen r₁) (ReflTransGen r₂) :=
+  fun _ _ h => Join₂.single_left (.single h)
 
-theorem MJoin₂.left_le : r₁ ≤ MJoin₂ r₁ r₂ := fun _ _ h => Join₂.single_left (.single h)
-
-theorem MJoin₂.swap_right_le : swap r₂ ≤ MJoin₂ r₁ r₂ :=
+theorem swap_right_le_join₂_reflTransGen : swap r₂ ≤ Join₂ (ReflTransGen r₁) (ReflTransGen r₂) :=
     fun _ _ h => Join₂.single_right (.single h)
 
 /-- If a relation is squeezed by a relation and its multi-step closure, they are multi-step equal -/

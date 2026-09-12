@@ -40,9 +40,11 @@ def Join₂ (r₁ r₂ : α → α → Prop) (a b : α) : Prop := ∃ c, r₁ a 
 
 /-- The join of the reflexive transitive closure. This is not named in Mathlib, but see
   `#loogle Relation.Join (Relation.ReflTransGen ?r)` -/
+@[deprecated "use `Join (ReflTrasnGen ·)` instead" (since := "2026-09-12")]
 abbrev MJoin (r : α → α → Prop) := Join (ReflTransGen r)
 
 /-- Generalisation of `MJoin` to two relations. -/
+@[deprecated "use Join₂ (ReflTransGen ·) (ReflTransGen ·) instead." (since := "2026-09-12")]
 abbrev MJoin₂ (r₁ r₂ : α → α → Prop) := Join₂ (ReflTransGen r₁) (ReflTransGen r₂)
 
 /-- The relation `r` 'up to' the relation `s`. -/
@@ -69,22 +71,22 @@ abbrev Commute (r₁ r₂ : α → α → Prop) := DiamondCommute (ReflTransGen 
 /-- A relation is semi-confluent when single and multiple steps with common origin
   are multi-joinable. -/
 abbrev SemiConfluent (r : α → α → Prop) :=
-  ∀ {x y₁ y₂}, r x y₁ → ReflTransGen r x y₂ → MJoin r y₁ y₂
+  ∀ {x y₁ y₂}, r x y₁ → ReflTransGen r x y₂ → Join (ReflTransGen r) y₁ y₂
 
 /-- Generalisation of `SemiConfluent` to two relations. -/
 abbrev SemiCommute (r₁ r₂ : α → α → Prop) :=
-  ∀ {x y₁ y₂}, r₁ x y₁ → ReflTransGen r₂ x y₂ → MJoin₂ r₂ r₁ y₁ y₂
+  ∀ {x y₁ y₂}, r₁ x y₁ → ReflTransGen r₂ x y₂ → Join₂ (ReflTransGen r₂) (ReflTransGen r₁) y₁ y₂
 
 /-- A relation has the Church Rosser property when equivalence implies multi-joinability. -/
-abbrev ChurchRosser (r : α → α → Prop) := ∀ {x y}, EqvGen r x y → MJoin r x y
+abbrev ChurchRosser (r : α → α → Prop) := ∀ {x y}, EqvGen r x y → Join (ReflTransGen r) x y
 
 /-- A relation is locally confluent when all reductions with a common origin are multi-joinable -/
 abbrev LocallyConfluent (r : α → α → Prop) :=
-  ∀ {a b c : α}, r a b → r a c → MJoin r b c
+  ∀ {a b c : α}, r a b → r a c → Join (ReflTransGen r) b c
 
 /-- Generalization of `LocallyConfluent` to two relations. -/
 def LocallyCommute (r₁ r₂ : α → α → Prop) :=
-  ∀ {a b c : α}, r₁ a b → r₂ a c → MJoin₂ r₂ r₁ b c
+  ∀ {a b c : α}, r₁ a b → r₂ a c → Join₂ (ReflTransGen r₂) (ReflTransGen r₁) b c
 
 /-- A relation is strongly confluent when single steps are reflexive- and multi-joinable. -/
 abbrev StronglyConfluent (r : α → α → Prop) :=
