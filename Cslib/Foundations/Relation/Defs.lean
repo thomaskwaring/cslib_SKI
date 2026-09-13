@@ -43,10 +43,6 @@ def Join₂ (r₁ r₂ : α → α → Prop) (a b : α) : Prop := ∃ c, r₁ a 
 @[deprecated "use `Join (ReflTrasnGen ·)` instead" (since := "2026-09-12")]
 abbrev MJoin (r : α → α → Prop) := Join (ReflTransGen r)
 
-/-- Generalisation of `MJoin` to two relations. -/
-@[deprecated "use Join₂ (ReflTransGen ·) (ReflTransGen ·) instead." (since := "2026-09-12")]
-abbrev MJoin₂ (r₁ r₂ : α → α → Prop) := Join₂ (ReflTransGen r₁) (ReflTransGen r₂)
-
 /-- The relation `r` 'up to' the relation `s`. -/
 def UpTo (r s : α → α → Prop) : α → α → Prop := Comp s (Comp r s)
 
