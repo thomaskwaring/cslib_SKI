@@ -52,8 +52,11 @@ theorem Commute.to_confluent : Commute r r = Confluent r := rfl
 
 @[simp] theorem LocallyCommute.to_locallyConfluent : LocallyCommute r r = LocallyConfluent r := rfl
 
-instance : Std.Symm (@Commute α) where
-  symm r₁ r₂ h x y₁ y₂ x_y₁ x_y₂ := by grind [h x_y₂ x_y₁, Join₂]
+instance : Std.Symm (@DiamondCommute α) where
+  symm _ _ h _ _ _ h₁ h₂ := Join₂.swap_iff.mp <| h h₂ h₁
+
+instance : Std.Symm (@LocallyCommute α) where
+  symm _ _ h _ _ _ h₁ h₂ := Join₂.swap_iff.mp <| h h₂ h₁
 
 lemma DiamondCommute.diamond_commute_reflTransGen_right (h : DiamondCommute r₁ r₂) :
     DiamondCommute r₁ (ReflTransGen r₂) := by
@@ -64,6 +67,11 @@ lemma DiamondCommute.diamond_commute_reflTransGen_right (h : DiamondCommute r₁
     obtain ⟨d, hbd, hcd⟩ := h h₁ ha
     obtain ⟨d', hdd', hcd'⟩ := ih hcd
     exact ⟨d', hdd'.head hbd, hcd'⟩
+
+lemma DiamondCommute.diamond_commute_reflTransGen_left (h : DiamondCommute r₁ r₂) :
+    DiamondCommute (ReflTransGen r₁) r₂ := by
+  rw [comm (r := DiamondCommute)] at h ⊢
+  exact h.diamond_commute_reflTransGen_right
 
 lemma DiamondCommute.to_semiCommute (h : DiamondCommute r₁ r₂) : SemiCommute r₁ r₂ :=
   fun h₁ h₂ => Join₂.mono le_rfl ReflTransGen.le_reflTransGen _ _ <|
@@ -117,6 +125,11 @@ theorem semiCommute_iff_commute : SemiCommute r₁ r₂ ↔ Commute r₁ r₂ :=
 
 theorem DiamondCommute.to_commute (h : DiamondCommute r₁ r₂) : Commute r₁ r₂ :=
   semiCommute_iff_commute.mp h.to_semiCommute
+
+instance : Std.Symm (@SemiCommute α) where
+  symm r₁ r₂ h := by
+    rw [semiCommute_iff_commute] at h ⊢
+    exact symm (r := Commute) h
 
 theorem churchRosser_iff_eqvGen_le_join_reflTransGen :
     ChurchRosser r ↔ EqvGen r ≤ Join (ReflTransGen r) :=
