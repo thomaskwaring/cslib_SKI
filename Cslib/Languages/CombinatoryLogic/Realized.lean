@@ -72,24 +72,24 @@ theorem realizes_swap : C ⊩ (Function.swap : (α → β → γ) → β → α 
 -/
 
 instance : Realized Bool where
-  Realizes' xu u := ∀ {y z : SKI}, (xu ⬝ y ⬝ z) ↠ (if u then y else z)
+  Realizes' xu u := ∀ (y z : SKI), (xu ⬝ y ⬝ z) ↠ (if u then y else z)
   realizes_left_of_red h htr y z := (@h y z).head <| red_head _ _ z <| red_head _ _ _ htr
 
 /-- Standard `true`: `TT := λ x y. x`. -/
 def TT : SKI := K
 
-theorem realizes_true : TT ⊩ true := fun {y z} ↦ MRed.K y z
+theorem realizes_true : TT ⊩ true := fun y z ↦ MRed.K y z
 
 /-- Standard `false`: `FF := λ x y. y`. -/
 def FF : SKI := (&1 : SKI.Polynomial 2).toSKI
 
-theorem realizes_false : FF ⊩ false := fun {y z} ↦ SKI.Polynomial.toSKI_correct _ [y, z] rfl
+theorem realizes_false : FF ⊩ false := fun y z ↦ SKI.Polynomial.toSKI_correct _ [y, z] rfl
 
 /-- Boolean conditional. -/
 def Cond : SKI := RotR
 
 theorem Realizes.cond_app_red_ite {xu : SKI} {u : Bool} (hu : xu ⊩ u) (y z : SKI) :
-    (Cond ⬝ y ⬝ z ⬝ xu) ↠ if u then y else z := (rotR_def y z xu).trans hu
+    (Cond ⬝ y ⬝ z ⬝ xu) ↠ if u then y else z := (rotR_def y z xu).trans (hu y z)
 
 theorem cond_realizes_ite : Cond ⊩ (fun (a b : α) (u : Bool) ↦ if u then a else b) := by
   rintro xa a ha xb b hb xu (_ | _) hu

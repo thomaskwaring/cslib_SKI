@@ -6,7 +6,7 @@ Authors: Thomas Waring, Jesse Alama
 
 module
 
-public import Cslib.Languages.CombinatoryLogic.Basic
+public import Cslib.Languages.CombinatoryLogic.Realized
 public import Mathlib.Data.Nat.Pairing
 
 /-!
@@ -63,68 +63,31 @@ namespace Cslib
 
 namespace SKI
 
+variable {α β γ : Type*} [Realized α] [Realized β] [Realized γ] {x y : SKI}
+
 open Red MRed
 
-/-- Function form of the church numerals. -/
-def Church (n : Nat) (f x : SKI) : SKI :=
-match n with
-| 0 => x
-| n+1 => f ⬝ (Church n f x)
-
-@[simp] lemma Church_zero (f x : SKI) : Church 0 f x = x := rfl
-@[simp] lemma Church_succ (n : Nat) (f x : SKI) : Church (n+1) f x = f ⬝ Church n f x := rfl
-
-/-- `church` commutes with reduction. -/
-lemma church_red (n : Nat) (f f' x x' : SKI) (hf : f ↠ f') (hx : x ↠ x') :
-    Church n f x ↠ Church n f' x' := by
-  induction n with
-  | zero => exact hx
-  | succ n ih => exact parallel_mRed hf ih
-
-/-- The term `a` is βη-equivalent to a standard church numeral. -/
-def IsChurch (n : Nat) (a : SKI) : Prop :=
-    ∀ f x :SKI, (a ⬝ f ⬝ x) ↠ (Church n f x)
-
-/-- To show `IsChurch n a` it suffices to show the same for a reduct of `a`. -/
-theorem isChurch_trans (n : Nat) {a a' : SKI} (h : a ↠ a') :
-    IsChurch n a' → IsChurch n a := by
-  simp_rw [IsChurch]
-  intro ha' f x
-  calc
-  _ ↠ a' ⬝ f ⬝ x := by apply MRed.head; apply MRed.head; exact h
-  _ ↠ Church n f x := by apply ha'
-
+instance : Realized ℕ where
+  Realizes' xn n := ∀ f x, (xn ⬝ f ⬝ x) ↠ (f ⬝ ·)^[n] x
+  realizes_left_of_red h htr f x := (h f x).head <| red_head _ _ _ <| red_head _ _ _ htr
 
 /-! ### Church numeral basics -/
 
 /-- Church zero := λ f x. x -/
-protected def Zero : SKI := K ⬝ I
+protected def Zero : SKI := (&1 : SKI.Polynomial 2).toSKI
 @[scoped grind .]
-theorem zero_correct : IsChurch 0 SKI.Zero := by
-  unfold IsChurch SKI.Zero Church
-  intro f x
-  calc
-  _ ↠ I ⬝ x := by apply Relation.ReflTransGen.single; apply red_head; apply red_K
-  _ ⭢ x := by apply red_I
+theorem realizes_zero : SKI.Zero ⊩ 0 := (SKI.Polynomial.toSKI_correct _ [·, ·] rfl)
 
 /-- Church one := λ f x. f x -/
 protected def One : SKI := I
 @[scoped grind .]
-theorem one_correct : IsChurch 1 SKI.One := by
-  intro f x
-  apply head
-  exact .single (red_I f)
+theorem realizes_one : SKI.One ⊩ 1 := fun f x ↦ MRed.head x <| MRed.I f
 
-/-- Church succ := λ a f x. f (a f x) ~ λ a f. B f (a f) ~ λ a. S B a ~ S B -/
-protected def Succ : SKI := S ⬝ B
-@[scoped grind →]
-theorem succ_correct (n : Nat) (a : SKI) (h : IsChurch n a) :
-    IsChurch (n+1) (SKI.Succ ⬝ a) := by
-  intro f x
-  calc
-  _ ⭢ B ⬝ f ⬝ (a ⬝ f) ⬝ x := by apply red_head; apply red_S
-  _ ↠ f ⬝ (a ⬝ f ⬝ x) := by apply B_def
-  _ ↠ f ⬝ (Church n  f x) := by apply MRed.tail; exact h f x
+/-- Church succ := λ a f x. a f (f x) -/
+protected def Succ : SKI := (&0 ⬝' &1 ⬝' (&1 ⬝' &2) : SKI.Polynomial 3).toSKI
+theorem realizes_succ : SKI.Succ ⊩ Nat.succ := by
+  intro xn n hn f x
+  exact (SKI.Polynomial.toSKI_correct _ [xn, f, x] rfl).trans <| hn f (f ⬝ x)
 
 /-- Build the canonical SKI Church numeral for `n`. -/
 def toChurch : ℕ → SKI
@@ -137,463 +100,386 @@ def toChurch : ℕ → SKI
 @[simp] lemma toChurch_succ (n : ℕ) : toChurch (n + 1) = SKI.Succ ⬝ (toChurch n) := rfl
 
 /-- `toChurch n` correctly represents `n`. -/
-@[scoped grind .]
-theorem toChurch_correct (n : ℕ) : IsChurch n (toChurch n) := by
+theorem toChurch_realizes (n : ℕ) : toChurch n ⊩ n := by
   induction n with
-  | zero => exact zero_correct
-  | succ n ih => exact succ_correct n (toChurch n) ih
+  | zero => exact realizes_zero
+  | succ _ ih => exact realizes_succ ih
 
-/--
-To define the predecessor, iterate the function `PredAux` ⟨i, j⟩ ↦ ⟨j, j+1⟩ on ⟨0,0⟩, then take
-the  first component.
--/
-def PredAuxPoly : SKI.Polynomial 1 := MkPair ⬝' (Snd ⬝' &0) ⬝' (SKI.Succ ⬝' (Snd ⬝' &0))
-/-- A term representing PredAux -/
-def PredAux : SKI := PredAuxPoly.toSKI
-theorem predAux_def (p : SKI) :  (PredAux ⬝ p) ↠ MkPair ⬝ (Snd ⬝ p) ⬝ (SKI.Succ ⬝ (Snd ⬝ p)) :=
-  PredAuxPoly.toSKI_correct [p] (by simp)
+/-- Iteration on natural numbers. -/
+def Iter : SKI := R
 
-/-- Useful auxiliary definition expressing that `p` represents ns ∈ Nat × Nat. -/
-def IsChurchPair (ns : Nat × Nat) (x : SKI) : Prop :=
-  IsChurch ns.1 (Fst ⬝ x) ∧ IsChurch ns.2 (Snd ⬝ x)
+theorem realizes_natIterate : Iter ⊩ @Nat.iterate α := by
+  intro xf f hf xn n hn xa a ha
+  suffices (xf ⬝ ·)^[n] xa ⊩ f^[n] a from
+    this.left_of_mRed <| (MRed.head _ <| R_def xf xn).trans (hn xf xa)
+  clear hn
+  induction n generalizing xa a with
+  | zero => exact ha
+  | succ _ ih => exact ih <| hf ha
 
-theorem isChurchPair_trans (ns : Nat × Nat) (a a' : SKI) (h : a ↠ a') :
-    IsChurchPair ns a' → IsChurchPair ns a := by
-  simp_rw [IsChurchPair]
-  intro ⟨ha₁,ha₂⟩
-  constructor
-  · apply isChurch_trans (a' := Fst ⬝ a')
-    · apply MRed.tail; exact h
-    · exact ha₁
-  · apply isChurch_trans (a' := Snd ⬝ a')
-    · apply MRed.tail; exact h
-    · exact ha₂
+/-- Auxilliary definition for primitive recursion on naturals (Kleene's "dentist trick"). -/
+private def recPairStepNat (f : Nat → α → α) : α × Nat → α × Nat
+  | ⟨y, m⟩ => ⟨f m y, m + 1⟩
 
-theorem predAux_correct (p : SKI) (ns : Nat × Nat) (h : IsChurchPair ns p) :
-    IsChurchPair ⟨ns.2, ns.2+1⟩ (PredAux ⬝ p) := by
-  refine isChurchPair_trans _ _ (MkPair ⬝ (Snd ⬝ p) ⬝ (SKI.Succ ⬝ (Snd ⬝ p))) (predAux_def p) ?_
-  constructor
-  · exact isChurch_trans ns.2 (fst_correct _ _) h.2
-  · refine isChurch_trans (ns.2+1) (snd_correct _ _) ?_
-    exact succ_correct ns.2 (Snd ⬝ p) h.2
-
-/-- The stronger induction hypothesis necessary for the proof of `pred_correct`. -/
-theorem predAux_correct' (n : Nat) :
-    IsChurchPair (n.pred, n) <| Church n PredAux  (MkPair ⬝ SKI.Zero ⬝ SKI.Zero) := by
+private lemma iterate_recPairStepNat {α' : Type*} (a : α') (f : Nat → α' → α') (n : Nat) :
+    (recPairStepNat f)^[n] ⟨a, 0⟩ = ⟨Nat.rec a f n, n⟩ := by
   induction n with
-    | zero =>
-      apply isChurchPair_trans ⟨0,0⟩ _ (MkPair ⬝ SKI.Zero ⬝ SKI.Zero)
-        (by rfl)
-      constructor <;> apply isChurch_trans 0 ?_ zero_correct
-      · exact fst_correct _ _
-      · exact snd_correct _ _
-    | succ n ih =>
-      simp_rw [Church_succ]
-      apply predAux_correct (ns := ⟨n.pred, n⟩) (h := ih)
+  | zero => simp
+  | succ n ih => rw [Function.iterate_succ', Function.comp_apply, ih, recPairStepNat]
 
-/-- Predecessor := λ n. Fst ⬝ (n ⬝ PredAux ⬝ (MkPair ⬝ Zero ⬝ Zero)) -/
-def PredPoly : SKI.Polynomial 1 := Fst ⬝' (&0 ⬝' PredAux ⬝' (MkPair ⬝ SKI.Zero ⬝ SKI.Zero))
-/-- A term representing Pred -/
-def Pred : SKI := PredPoly.toSKI
-theorem pred_def (a : SKI) : (Pred ⬝ a) ↠ Fst ⬝ (a ⬝ PredAux ⬝ (MkPair ⬝ SKI.Zero ⬝ SKI.Zero)) :=
-  PredPoly.toSKI_correct [a] (by simp)
+/-- `SKI` version on `recPairStepNat`. -/
+private def recPairStepSKI : SKI := (SKI.MkPair ⬝'
+  (&0 ⬝' (Snd ⬝' &1) ⬝' (Fst ⬝' &1)) ⬝' (SKI.Succ ⬝' (Snd ⬝' &1)) : SKI.Polynomial 2).toSKI
 
-theorem pred_correct (n : Nat) (a : SKI) (h : IsChurch n a) : IsChurch n.pred (Pred ⬝ a) := by
-  refine isChurch_trans n.pred
-    (pred_def a) ?_
-  refine isChurch_trans _ (a' := Fst ⬝ (Church n PredAux (MkPair ⬝ SKI.Zero ⬝ SKI.Zero))) ?_ ?_
-  · apply MRed.tail
-    exact h _ _
-  · exact predAux_correct' n |>.1
+private lemma realizes_recPairStep : recPairStepSKI ⊩ @recPairStepNat α := by
+  intro xf f hf xp p ⟨ha, hn⟩
+  suffices (SKI.MkPair ⬝ (xf ⬝ (Snd ⬝ xp) ⬝ (Fst ⬝ xp)) ⬝ (SKI.Succ ⬝ (Snd ⬝ xp))) ⊩
+    (recPairStepNat f p) from this.left_of_mRed <| SKI.Polynomial.toSKI_correct _ [xf, xp] rfl
+  exact realizes_prodMk (hf hn ha) (realizes_succ hn)
 
+private lemma realizes_recPairStep_iter {a : α} {xa : SKI} (ha : xa ⊩ a) {f : Nat → α → α}
+    {xf : SKI} (hf : xf ⊩ f) {n : Nat} {xn : SKI} (hn : xn ⊩ n) :
+    (Iter ⬝ (recPairStepSKI ⬝ xf) ⬝ xn ⬝ (MkPair ⬝ xa ⬝ SKI.Zero)) ⊩
+      (⟨Nat.rec a f n, n⟩ : α × Nat) := by
+  rw [← iterate_recPairStepNat]
+  exact realizes_natIterate (realizes_recPairStep hf) hn <| realizes_prodMk ha realizes_zero
 
-/-! ### Primitive recursion -/
+/-- Recursor for `Nat`. -/
+def natRec : SKI :=
+  (Fst ⬝' (Iter ⬝' ((SKI.MkPair ⬝' (&0 ⬝' (Snd ⬝' &1) ⬝' (Fst ⬝' &1)) ⬝'
+    (SKI.Succ ⬝' (Snd ⬝' &1)) : SKI.Polynomial 2).toSKI ⬝' &1) ⬝' &2 ⬝'
+    (MkPair ⬝' &0 ⬝' SKI.Zero)) : SKI.Polynomial 3).toSKI
+
+/-- Primitive recursion on `Nat`. -/
+theorem realizes_natRec : natRec ⊩ (Nat.rec : α → (Nat → α → α) → Nat → α) := by
+  intro xa a ha xf f hf xn n hn
+  refine Realizes.left_of_mRed (realizes_recPairStep_iter ha hf hn).1 ?_
+  exact SKI.Polynomial.toSKI_correct _ [xa, xf, xn] rfl
+
+def Pred : SKI := natRec ⬝ SKI.Zero ⬝ K
+
+theorem realizes_pred : Pred ⊩ Nat.pred := by
+  have : Nat.pred = Nat.rec 0 (Function.const ℕ) := by ext n; cases n <;> rfl
+  rw [this]
+  apply realizes_natRec realizes_zero
+  exact realizes_const
 
 /-- IsZero := λ n. n (K FF) TT -/
-def IsZeroPoly : SKI.Polynomial 1 := &0 ⬝' (K ⬝ FF) ⬝' TT
-/-- A term representing IsZero -/
-def IsZero : SKI := IsZeroPoly.toSKI
-theorem isZero_def (a : SKI) : (IsZero ⬝ a) ↠ a ⬝ (K ⬝ FF) ⬝ TT :=
-  IsZeroPoly.toSKI_correct [a] (by simp)
-theorem isZero_correct (n : Nat) (a : SKI) (h : IsChurch n a) :
-    IsBool (n = 0) (IsZero ⬝ a) := by
-  apply isBool_trans (a' := a ⬝ (K ⬝ FF) ⬝ TT) (h := isZero_def a)
-  by_cases n=0
-  case pos h0 =>
-    simp_rw [h0]
-    rw [h0] at h
-    apply isBool_trans (ha' := TT_correct)
-    exact h _ _
-  case neg h0 =>
-    simp_rw [h0]
-    let ⟨k,hk⟩ := Nat.exists_eq_succ_of_ne_zero h0
-    rw [hk] at h
-    apply isBool_trans (ha' := FF_correct)
-    calc
-    _ ↠ (K ⬝ FF) ⬝ Church k (K ⬝ FF) TT := h _ _
-    _ ⭢ FF := red_K _ _
+def IsZero : SKI := (&0 ⬝' (K ⬝ FF) ⬝' TT : SKI.Polynomial 1).toSKI
 
+theorem realizes_beq_zero : IsZero ⊩ (· == 0 : ℕ → Bool) := by
+  intro xn n hn
+  apply Realizes.left_of_mRed ?_ (SKI.Polynomial.toSKI_correct _ [xn] rfl)
+  cases n with
+  | zero => exact realizes_true.left_of_mRed <| hn (K ⬝ FF) TT
+  | succ n =>
+    refine realizes_false.left_of_mRed <| (hn (K ⬝ FF) TT).trans ?_
+    rw [Function.iterate_succ']
+    exact MRed.K FF ((K ⬝ FF ⬝ ·)^[n] TT)
 
-/--
-To define `Rec x g n := if n==0 then x else (Rec x g (Pred n))`, we obtain a fixed point of
-R ↦ λ x g n. Cond ⬝ (IsZero ⬝ n) ⬝ x ⬝ (g ⬝ a ⬝ (R ⬝ x ⬝ g ⬝ (Pred ⬝ n)))
--/
-def RecAuxPoly : SKI.Polynomial 4 :=
-  SKI.Cond ⬝' &1 ⬝' (&2 ⬝' &3 ⬝' (&0 ⬝' &1 ⬝' &2 ⬝' (Pred ⬝' &3))) ⬝' (IsZero ⬝' &3)
-/-- A term representing RecAux -/
-def RecAux : SKI := RecAuxPoly.toSKI
-theorem recAux_def (R₀ x g a : SKI) :
-    (RecAux ⬝ R₀ ⬝ x ⬝ g ⬝ a) ↠
-      SKI.Cond ⬝ x ⬝ (g ⬝ a ⬝ (R₀ ⬝ x ⬝ g ⬝ (Pred ⬝ a))) ⬝ (IsZero ⬝ a)  :=
-  RecAuxPoly.toSKI_correct [R₀, x, g, a] (by simp)
-
-/--
-We define Rec so that
-`Rec ⬝ x ⬝ g ⬝ a ↠ SKI.Cond ⬝ x ⬝ (g ⬝ a ⬝ (Rec ⬝ x ⬝ g ⬝ (Pred ⬝ a))) ⬝ (IsZero ⬝ a)`
--/
-def Rec : SKI := fixedPoint RecAux
-theorem rec_def (x g a : SKI) :
-    (Rec ⬝ x ⬝ g ⬝ a) ↠ SKI.Cond ⬝ x ⬝ (g ⬝ a ⬝ (Rec ⬝ x ⬝ g ⬝ (Pred ⬝ a))) ⬝ (IsZero ⬝ a) := calc
-  _ ↠ RecAux ⬝ Rec ⬝ x ⬝ g ⬝ a := by
-      apply MRed.head; apply MRed.head; apply MRed.head
-      apply fixedPoint_correct
-  _ ↠ SKI.Cond ⬝ x ⬝ (g ⬝ a ⬝ (Rec ⬝ x ⬝ g ⬝ (Pred ⬝ a))) ⬝ (IsZero ⬝ a) := recAux_def Rec x g a
-
-theorem rec_zero (x g a : SKI) (ha : IsChurch 0 a) : (Rec ⬝ x ⬝ g ⬝ a) ↠ x := by
-  calc
-  _ ↠ SKI.Cond ⬝ x ⬝ (g ⬝ a ⬝ (Rec ⬝ x ⬝ g ⬝ (Pred ⬝ a))) ⬝ (IsZero ⬝ a) := rec_def _ _ _
-  _ ↠ if (Nat.beq 0 0) then x else (g ⬝ a ⬝ (Rec ⬝ x ⬝ g ⬝ (Pred ⬝ a))) := by
-      apply cond_correct
-      exact isZero_correct 0 a ha
-
-theorem rec_succ (n : Nat) (x g a : SKI) (ha : IsChurch (n + 1) a) :
-    (Rec ⬝ x ⬝ g ⬝ a) ↠ g ⬝ a ⬝ (Rec ⬝ x ⬝ g ⬝ (Pred ⬝ a)) := by
-  calc
-  _ ↠ SKI.Cond ⬝ x ⬝ (g ⬝ a ⬝ (Rec ⬝ x ⬝ g ⬝ (Pred ⬝ a))) ⬝ (IsZero ⬝ a) := rec_def _ _ _
-  _ ↠ if (Nat.beq (n+1) 0) then x else (g ⬝ a ⬝ (Rec ⬝ x ⬝ g ⬝ (Pred ⬝ a))) := by
-      apply cond_correct
-      exact isZero_correct (n+1) a ha
-
-/-- Generalized primitive recursion. Given a sequence `r : ℕ → ℕ`, if `base` computes the base
-value `r 0` and `step` computes the recursion step pointwise — taking the Church numeral of the
-current index `k + 1` and the previous result `r k` to `r (k + 1)` — then `Rec ⬝ base ⬝ step`
-computes `r` on every input. This is the primitive-recursion counterpart of `RFindAbove_correct'`
-for μ-recursion: it isolates the behaviour of `Rec` from any particular client (such as the
-translation of `Nat.Partrec.Code.prec`). -/
-theorem rec_correct' (base step : SKI) (r : ℕ → ℕ)
-    (hbase : IsChurch (r 0) base)
-    (hstep : ∀ k : Nat, ∀ cb cp : SKI, IsChurch (k + 1) cb → IsChurch (r k) cp →
-      IsChurch (r (k + 1)) (step ⬝ cb ⬝ cp)) :
-    ∀ n : Nat, ∀ cn : SKI, IsChurch n cn → IsChurch (r n) (Rec ⬝ base ⬝ step ⬝ cn) := by
-  intro n
-  induction n with
-  | zero => exact fun cn hcn => isChurch_trans _ (rec_zero _ _ cn hcn) hbase
-  | succ k ih =>
-    intro cn hcn
-    exact isChurch_trans _ (rec_succ k base step cn hcn)
-      (hstep k cn (Rec ⬝ base ⬝ step ⬝ (Pred ⬝ cn)) hcn (ih (Pred ⬝ cn) (pred_correct _ cn hcn)))
-
+-- This *should* be superceded by the new approach...
+-- theorem rec_correct' (base step : SKI) (r : ℕ → ℕ) (hbase : base ⊩ r 0)
+--     (hstep : ∀ k : Nat, ∀ cb cp : SKI, cb ⊩ k + 1 → cp ⊩ r k → (step ⬝ cb ⬝ cp) ⊩ r (k + 1)) :
+--     (natRec ⬝ base ⬝ step) ⊩ r := by
 
 /-! ### Root-finding (μ-recursion) -/
 
 /--
 First define an auxiliary function `RFindAbove` that looks for roots above a fixed number n, as a
-fixed point of R ↦ λ n f. if f n = 0 then n else R f (n+1)
+fixed point of R ↦ λ n f. if f n = 0 then n else R f (n + 1)
                  ~ λ n f. Cond ⬝ n (R f (Succ n)) (IsZero (f n))
 -/
-def RFindAboveAuxPoly : SKI.Polynomial 3 :=
-    SKI.Cond ⬝' &1 ⬝' (&0 ⬝' (SKI.Succ ⬝' &1) ⬝' &2) ⬝' (IsZero ⬝' (&2 ⬝' &1))
-/-- A term representing RFindAboveAux -/
-def RFindAboveAux : SKI := RFindAboveAuxPoly.toSKI
-lemma rfindAboveAux_def (R₀ f a : SKI) :
-    (RFindAboveAux ⬝ R₀ ⬝ a ⬝ f) ↠ SKI.Cond ⬝ a ⬝ (R₀ ⬝ (SKI.Succ ⬝ a) ⬝ f) ⬝ (IsZero ⬝ (f ⬝ a)) :=
-  RFindAboveAuxPoly.toSKI_correct [R₀, a, f] (by trivial)
+private def RFindAboveAuxPoly : SKI.Polynomial 3 :=
+  IsZero ⬝' (&2 ⬝' &1) ⬝' &1 ⬝' (&0 ⬝' (SKI.Succ ⬝' &1) ⬝' &2)
+-- /-- A term representing RFindAboveAux -/
+-- private def RFindAboveAux : SKI := RFindAboveAuxPoly.toSKI
+-- private lemma rfindAboveAux_def (R₀ f a : SKI) :
+--     (RFindAboveAux ⬝ R₀ ⬝ a ⬝ f) ↠ SKI.Cond ⬝ a ⬝ (R₀ ⬝ (SKI.Succ ⬝ a) ⬝ f) ⬝ (IsZero ⬝ (f ⬝ a)) :=
+--   RFindAboveAuxPoly.toSKI_correct [R₀, a, f] (by trivial)
 
-theorem rfindAboveAux_base (R₀ f a : SKI) (hfa : IsChurch 0 (f ⬝ a)) :
-    (RFindAboveAux ⬝ R₀ ⬝ a ⬝ f) ↠ a := calc
-  _ ↠ SKI.Cond ⬝ a ⬝ (R₀ ⬝ (SKI.Succ ⬝ a) ⬝ f) ⬝ (IsZero ⬝ (f ⬝ a)) := rfindAboveAux_def _ _ _
-  _ ↠ if (Nat.beq 0 0) then a else (R₀ ⬝ (SKI.Succ ⬝ a) ⬝ f) := by
-      apply cond_correct
-      apply isZero_correct _ _ hfa
-theorem rfindAboveAux_step (R₀ f a : SKI) {m : Nat} (hfa : IsChurch (m + 1) (f ⬝ a)) :
-    (RFindAboveAux ⬝ R₀ ⬝ a ⬝ f) ↠ R₀ ⬝ (SKI.Succ ⬝ a) ⬝ f := calc
-  _ ↠ SKI.Cond ⬝ a ⬝ (R₀ ⬝ (SKI.Succ ⬝ a) ⬝ f) ⬝ (IsZero ⬝ (f ⬝ a)) := rfindAboveAux_def _ _ _
-  _ ↠ if (Nat.beq (m+1) 0) then a else (R₀ ⬝ (SKI.Succ ⬝ a) ⬝ f) := by
-      apply cond_correct
-      apply isZero_correct _ _ hfa
+-- theorem rfindAboveAux_base (R₀ f a : SKI) (hfa : IsChurch 0 (f ⬝ a)) :
+--     (RFindAboveAux ⬝ R₀ ⬝ a ⬝ f) ↠ a := calc
+--   _ ↠ SKI.Cond ⬝ a ⬝ (R₀ ⬝ (SKI.Succ ⬝ a) ⬝ f) ⬝ (IsZero ⬝ (f ⬝ a)) := rfindAboveAux_def _ _ _
+--   _ ↠ if (Nat.beq 0 0) then a else (R₀ ⬝ (SKI.Succ ⬝ a) ⬝ f) := by
+--       apply cond_correct
+--       apply isZero_correct _ _ hfa
+-- theorem rfindAboveAux_step (R₀ f a : SKI) {m : Nat} (hfa : IsChurch (m + 1) (f ⬝ a)) :
+--     (RFindAboveAux ⬝ R₀ ⬝ a ⬝ f) ↠ R₀ ⬝ (SKI.Succ ⬝ a) ⬝ f := calc
+--   _ ↠ SKI.Cond ⬝ a ⬝ (R₀ ⬝ (SKI.Succ ⬝ a) ⬝ f) ⬝ (IsZero ⬝ (f ⬝ a)) := rfindAboveAux_def _ _ _
+--   _ ↠ if (Nat.beq (m+1) 0) then a else (R₀ ⬝ (SKI.Succ ⬝ a) ⬝ f) := by
+--       apply cond_correct
+--       apply isZero_correct _ _ hfa
 
 /-- Find the minimal root of `fNat` above a number n -/
-def RFindAbove : SKI := RFindAboveAux.fixedPoint
+def RFindAbove : SKI :=
+  (IsZero ⬝' (&2 ⬝' &1) ⬝' &1 ⬝' (&0 ⬝' (SKI.Succ ⬝' &1) ⬝' &2) : SKI.Polynomial 3).toSKI.fixedPoint
 
 /-- One unfolding of `RFindAbove`: apply the fixed-point combinator once. -/
-theorem RFindAbove_unfold (x g : SKI) :
-    (RFindAbove ⬝ x ⬝ g) ↠ RFindAboveAux ⬝ RFindAbove ⬝ x ⬝ g := by
+theorem RFindAbove_unfold (x g : SKI) : (RFindAbove ⬝ x ⬝ g) ↠
+    (IsZero ⬝ (g ⬝ x)) ⬝ x ⬝ (RFindAbove ⬝ (SKI.Succ ⬝ x) ⬝ g) := by
+  refine Relation.ReflTransGen.trans ?_ <| RFindAboveAuxPoly.toSKI_correct [RFindAbove, x, g] rfl
   apply MRed.head; apply MRed.head; exact fixedPoint_correct _
 
 /-- Generalized root-finding that works with pointwise properties rather than a total
     function. At the root `m + n`, `f` yields Church 0; below, a nonzero Church numeral. -/
-theorem RFindAbove_correct' (f x : SKI) (n m : Nat) (hx : IsChurch m x)
-    (hf_root : ∀ y, IsChurch (m + n) y → IsChurch 0 (f ⬝ y))
-    (hf_below : ∀ i < n, ∀ y, IsChurch (m + i) y → ∃ k, IsChurch (k + 1) (f ⬝ y)) :
-    IsChurch (m + n) (RFindAbove ⬝ x ⬝ f) := by
-  induction n generalizing m x
-  all_goals apply isChurch_trans _ (RFindAbove_unfold x f)
-  case zero =>
-    exact isChurch_trans _ (rfindAboveAux_base _ _ _ (hf_root x hx)) hx
-  case succ n ih =>
-    apply isChurch_trans (a' := RFindAbove ⬝ (SKI.Succ ⬝ x) ⬝ f)
-    · obtain ⟨k, hk⟩ := hf_below 0 (by omega) x (by simpa using hx)
-      exact rfindAboveAux_step _ _ _ hk
-    · have := ih (SKI.Succ ⬝ x) (m + 1) (succ_correct _ x hx)
-        (fun y hy => hf_root y (by grind))
-        (fun i hi y hy => hf_below (i + 1) (by omega) y (by grind))
-      grind
+theorem RFindAbove_correct' (f x : SKI) (n m : Nat) (hx : x ⊩ m)
+    (hf_root : ∀ y, y ⊩ (m + n) → (f ⬝ y) ⊩ 0)
+    (hf_below : ∀ i < n, ∀ y, y ⊩ (m + i) → ∃ k, (f ⬝ y) ⊩ (k + 1)) :
+    (RFindAbove ⬝ x ⬝ f) ⊩ (m + n) := by
+  induction n generalizing m x with
+  | zero =>
+    apply hx.left_of_mRed
+    exact (RFindAbove_unfold x f).trans <|
+      realizes_beq_zero (hf_root x hx) x ((RFindAbove ⬝ (SKI.Succ ⬝ x) ⬝ f))
+  | succ n ih =>
+    have : (IsZero ⬝ (f ⬝ x)) ⊩ false :=
+      realizes_beq_zero (hf_below 0 n.zero_lt_succ x hx).choose_spec
+    refine Realizes.left_of_mRed ?_ ((RFindAbove_unfold x f).trans <| this ..)
+    specialize ih (SKI.Succ ⬝ x) (m + 1) (realizes_succ hx) (by grind)
+      (fun i hi y hy => hf_below (i + 1) (by lia) y (by grind))
+    grind
 
-theorem RFindAbove_correct (fNat : Nat → Nat) (f x : SKI)
-    (hf : ∀ i : Nat, ∀ y : SKI, IsChurch i y → IsChurch (fNat i) (f ⬝ y))
-    (n m : Nat) (hx : IsChurch m x) (hroot : fNat (m + n) = 0) (hpos : ∀ i < n, fNat (m + i) ≠ 0) :
-    IsChurch (m + n) (RFindAbove ⬝ x ⬝ f) := by
-  apply RFindAbove_correct' f x n m hx
-  · intro y hy; exact hroot ▸ hf (m + n) y hy
-  · exact fun i hi y hy => ⟨fNat (m + i) - 1,
-      Nat.succ_pred_eq_of_ne_zero (hpos i hi) ▸ hf (m + i) y hy⟩
-
+theorem RFindAbove_correct {xf xm : SKI} {f : ℕ → ℕ} (hf : xf ⊩ f) {m : ℕ}
+    (hm : xm ⊩ m) (n : Nat) (hroot : f (m + n) = 0) (hpos : ∀ i < n, f (m + i) ≠ 0) :
+    (RFindAbove ⬝ xm ⬝ xf) ⊩ m + n := by
+  apply RFindAbove_correct' xf xm n m hm
+  · intro y hy
+    exact hroot ▸ hf hy
+  · intro i hi y hy
+    use f (m + i) - 1, Nat.succ_pred_eq_of_ne_zero (hpos i hi) ▸ hf hy
 
 /-- Ordinary root finding is root finding above zero -/
 def RFind := RFindAbove ⬝ SKI.Zero
-theorem RFind_correct (fNat : Nat → Nat) (f : SKI)
-    (hf : ∀ (i : Nat) (y : SKI), IsChurch i y → IsChurch (fNat i) (f ⬝ y))
-    (n : Nat) (hroot : fNat n = 0) (hpos : ∀ i < n, fNat i ≠ 0) : IsChurch n (RFind ⬝ f) := by
-  have :_ := RFindAbove_correct (n := n) (fNat := fNat) (hf := hf) (hx := zero_correct)
+theorem RFind_correct {xf : SKI} {f : ℕ → ℕ} (hf : xf ⊩ f) (n : Nat) (hroot : f n = 0)
+    (hpos : ∀ i < n, f i ≠ 0) : (RFind ⬝ xf) ⊩ n := by
+  have : _ := RFindAbove_correct (n := n) (f := f) (hf := hf) (hm := realizes_zero)
   simp_rw [Nat.zero_add] at this
   exact this hroot hpos
 
+-- /-! ### Further numeric operations -/
 
+-- /-- Addition: λ n m. n Succ m -/
+-- def AddPoly : SKI.Polynomial 2 := &0 ⬝' SKI.Succ ⬝' &1
+-- /-- A term representing addition on church numerals -/
+-- protected def Add : SKI := AddPoly.toSKI
+-- theorem add_def (a b : SKI) : (SKI.Add ⬝ a ⬝ b) ↠ a ⬝ SKI.Succ ⬝ b :=
+--   AddPoly.toSKI_correct [a, b] (by simp)
 
-/-! ### Further numeric operations -/
+-- theorem add_correct (n m : Nat) (a b : SKI) (ha : IsChurch n a) (hb : IsChurch m b) :
+--     IsChurch (n + m) (SKI.Add ⬝ a ⬝ b) := by
+--   refine isChurch_trans (n + m) (a' := Church n SKI.Succ b) ?_ ?_
+--   · calc
+--     _ ↠ a ⬝ SKI.Succ ⬝ b := add_def a b
+--     _ ↠ Church n SKI.Succ b := ha SKI.Succ b
+--   · clear ha
+--     induction n with
+--       | zero => simp_rw [Nat.zero_add, Church]; exact hb
+--       | succ n ih =>
+--         simp_rw [Nat.add_right_comm, Church]
+--         exact succ_correct _ _ ih
 
-/-- Addition: λ n m. n Succ m -/
-def AddPoly : SKI.Polynomial 2 := &0 ⬝' SKI.Succ ⬝' &1
-/-- A term representing addition on church numerals -/
-protected def Add : SKI := AddPoly.toSKI
-theorem add_def (a b : SKI) : (SKI.Add ⬝ a ⬝ b) ↠ a ⬝ SKI.Succ ⬝ b :=
-  AddPoly.toSKI_correct [a, b] (by simp)
+-- /-- Multiplication: λ n m. n (Add m) Zero -/
+-- def MulPoly : SKI.Polynomial 2 := &0 ⬝' (SKI.Add ⬝' &1) ⬝' SKI.Zero
+-- /-- A term representing multiplication on church numerals -/
+-- protected def Mul : SKI := MulPoly.toSKI
+-- theorem mul_def (a b : SKI) : (SKI.Mul ⬝ a ⬝ b) ↠ a ⬝ (SKI.Add ⬝ b) ⬝ SKI.Zero :=
+--   MulPoly.toSKI_correct [a, b] (by simp)
 
-theorem add_correct (n m : Nat) (a b : SKI) (ha : IsChurch n a) (hb : IsChurch m b) :
-    IsChurch (n + m) (SKI.Add ⬝ a ⬝ b) := by
-  refine isChurch_trans (n + m) (a' := Church n SKI.Succ b) ?_ ?_
-  · calc
-    _ ↠ a ⬝ SKI.Succ ⬝ b := add_def a b
-    _ ↠ Church n SKI.Succ b := ha SKI.Succ b
-  · clear ha
-    induction n with
-      | zero => simp_rw [Nat.zero_add, Church]; exact hb
-      | succ n ih =>
-        simp_rw [Nat.add_right_comm, Church]
-        exact succ_correct _ _ ih
+-- theorem mul_correct {n m : Nat} {a b : SKI} (ha : IsChurch n a) (hb : IsChurch m b) :
+--     IsChurch (n * m) (SKI.Mul ⬝ a ⬝ b) := by
+--   refine isChurch_trans (n * m) (a' := Church n (SKI.Add ⬝ b) SKI.Zero) ?_ ?_
+--   · exact Trans.trans (mul_def a b) (ha (SKI.Add ⬝ b) SKI.Zero)
+--   · clear ha
+--     induction n with
+--       | zero => simp_rw [Nat.zero_mul, Church]; exact zero_correct
+--       | succ n ih =>
+--         simp_rw [Nat.add_mul, Nat.one_mul, Nat.add_comm, Church]
+--         exact add_correct m (n * m) b (Church n (SKI.Add ⬝ b) SKI.Zero) hb ih
 
-/-- Multiplication: λ n m. n (Add m) Zero -/
-def MulPoly : SKI.Polynomial 2 := &0 ⬝' (SKI.Add ⬝' &1) ⬝' SKI.Zero
-/-- A term representing multiplication on church numerals -/
-protected def Mul : SKI := MulPoly.toSKI
-theorem mul_def (a b : SKI) : (SKI.Mul ⬝ a ⬝ b) ↠ a ⬝ (SKI.Add ⬝ b) ⬝ SKI.Zero :=
-  MulPoly.toSKI_correct [a, b] (by simp)
+-- /-- Subtraction: λ n m. n Pred m -/
+-- def SubPoly : SKI.Polynomial 2 := &1 ⬝' Pred ⬝' &0
+-- /-- A term representing subtraction on church numerals -/
+-- protected def Sub : SKI := SubPoly.toSKI
+-- theorem sub_def (a b : SKI) : (SKI.Sub ⬝ a ⬝ b) ↠ b ⬝ Pred ⬝ a :=
+--   SubPoly.toSKI_correct [a, b] (by simp)
 
-theorem mul_correct {n m : Nat} {a b : SKI} (ha : IsChurch n a) (hb : IsChurch m b) :
-    IsChurch (n * m) (SKI.Mul ⬝ a ⬝ b) := by
-  refine isChurch_trans (n * m) (a' := Church n (SKI.Add ⬝ b) SKI.Zero) ?_ ?_
-  · exact Trans.trans (mul_def a b) (ha (SKI.Add ⬝ b) SKI.Zero)
-  · clear ha
-    induction n with
-      | zero => simp_rw [Nat.zero_mul, Church]; exact zero_correct
-      | succ n ih =>
-        simp_rw [Nat.add_mul, Nat.one_mul, Nat.add_comm, Church]
-        exact add_correct m (n * m) b (Church n (SKI.Add ⬝ b) SKI.Zero) hb ih
+-- theorem sub_correct (n m : Nat) (a b : SKI) (ha : IsChurch n a) (hb : IsChurch m b) :
+--     IsChurch (n - m) (SKI.Sub ⬝ a ⬝ b) := by
+--   refine isChurch_trans (n - m) (a' := Church m Pred a) ?_ ?_
+--   · calc
+--     _ ↠ b ⬝ Pred ⬝ a := sub_def a b
+--     _ ↠ Church m Pred a := hb Pred a
+--   · clear hb
+--     induction m with
+--       | zero => simp_rw [Nat.sub_zero, Church]; exact ha
+--       | succ m ih =>
+--         simp_rw [←Nat.sub_sub, Church]
+--         exact pred_correct _ _ ih
 
-/-- Subtraction: λ n m. n Pred m -/
-def SubPoly : SKI.Polynomial 2 := &1 ⬝' Pred ⬝' &0
-/-- A term representing subtraction on church numerals -/
-protected def Sub : SKI := SubPoly.toSKI
-theorem sub_def (a b : SKI) : (SKI.Sub ⬝ a ⬝ b) ↠ b ⬝ Pred ⬝ a :=
-  SubPoly.toSKI_correct [a, b] (by simp)
+-- /-- Comparison: (. ≤ .) := λ n m. IsZero ⬝ (Sub ⬝ n ⬝ m) -/
+-- def LEPoly : SKI.Polynomial 2 := IsZero ⬝' (SKI.Sub ⬝' &0 ⬝' &1)
+-- /-- A term representing comparison on church numerals -/
+-- protected def LE : SKI := LEPoly.toSKI
+-- theorem le_def (a b : SKI) : (SKI.LE ⬝ a ⬝ b) ↠ IsZero ⬝ (SKI.Sub ⬝ a ⬝ b) :=
+--   LEPoly.toSKI_correct [a, b] (by simp)
 
-theorem sub_correct (n m : Nat) (a b : SKI) (ha : IsChurch n a) (hb : IsChurch m b) :
-    IsChurch (n - m) (SKI.Sub ⬝ a ⬝ b) := by
-  refine isChurch_trans (n - m) (a' := Church m Pred a) ?_ ?_
-  · calc
-    _ ↠ b ⬝ Pred ⬝ a := sub_def a b
-    _ ↠ Church m Pred a := hb Pred a
-  · clear hb
-    induction m with
-      | zero => simp_rw [Nat.sub_zero, Church]; exact ha
-      | succ m ih =>
-        simp_rw [←Nat.sub_sub, Church]
-        exact pred_correct _ _ ih
+-- theorem le_correct (n m : Nat) (a b : SKI) (ha : IsChurch n a) (hb : IsChurch m b) :
+--     IsBool (n ≤ m) (SKI.LE ⬝ a ⬝ b) := by
+--   simp only [← decide_eq_decide.mpr <| Nat.sub_eq_zero_iff_le]
+--   apply isBool_trans (a' := IsZero ⬝ (SKI.Sub ⬝ a ⬝ b)) (h := le_def _ _)
+--   apply isZero_correct
+--   apply sub_correct <;> assumption
 
-/-- Comparison: (. ≤ .) := λ n m. IsZero ⬝ (Sub ⬝ n ⬝ m) -/
-def LEPoly : SKI.Polynomial 2 := IsZero ⬝' (SKI.Sub ⬝' &0 ⬝' &1)
-/-- A term representing comparison on church numerals -/
-protected def LE : SKI := LEPoly.toSKI
-theorem le_def (a b : SKI) : (SKI.LE ⬝ a ⬝ b) ↠ IsZero ⬝ (SKI.Sub ⬝ a ⬝ b) :=
-  LEPoly.toSKI_correct [a, b] (by simp)
+-- /-! ### Integer square root -/
 
-theorem le_correct (n m : Nat) (a b : SKI) (ha : IsChurch n a) (hb : IsChurch m b) :
-    IsBool (n ≤ m) (SKI.LE ⬝ a ⬝ b) := by
-  simp only [← decide_eq_decide.mpr <| Nat.sub_eq_zero_iff_le]
-  apply isBool_trans (a' := IsZero ⬝ (SKI.Sub ⬝ a ⬝ b)) (h := le_def _ _)
-  apply isZero_correct
-  apply sub_correct <;> assumption
+-- /-- Inner condition for Sqrt: with &0 = n, &1 = k,
+--     computes `if n < (k+1)² then 0 else 1`. -/
+-- def SqrtCondPoly : SKI.Polynomial 2 :=
+--   SKI.Cond ⬝' SKI.Zero ⬝' SKI.One
+--            ⬝' (SKI.Neg ⬝' (SKI.LE ⬝' (SKI.Mul ⬝' (SKI.Succ ⬝' &1) ⬝' (SKI.Succ ⬝' &1)) ⬝' &0))
 
-/-! ### Integer square root -/
+-- /-- SKI term for the inner condition of Sqrt -/
+-- def SqrtCond : SKI := SqrtCondPoly.toSKI
 
-/-- Inner condition for Sqrt: with &0 = n, &1 = k,
-    computes `if n < (k+1)² then 0 else 1`. -/
-def SqrtCondPoly : SKI.Polynomial 2 :=
-  SKI.Cond ⬝' SKI.Zero ⬝' SKI.One
-           ⬝' (SKI.Neg ⬝' (SKI.LE ⬝' (SKI.Mul ⬝' (SKI.Succ ⬝' &1) ⬝' (SKI.Succ ⬝' &1)) ⬝' &0))
+-- /-- `SqrtCond ⬝ n ⬝ k` reduces to: return 0 if `(k+1)² > n`, else 1.
+--     Used by `RFind` to locate the smallest such `k`, which is `√n`. -/
+-- theorem sqrtCond_def (cn ck : SKI) :
+--     (SqrtCond ⬝ cn ⬝ ck) ↠
+--       SKI.Cond ⬝ SKI.Zero ⬝ SKI.One ⬝
+--         (SKI.Neg ⬝ (SKI.LE ⬝ (SKI.Mul ⬝ (SKI.Succ ⬝ ck) ⬝ (SKI.Succ ⬝ ck)) ⬝ cn)) :=
+--   SqrtCondPoly.toSKI_correct [cn, ck] (by simp)
 
-/-- SKI term for the inner condition of Sqrt -/
-def SqrtCond : SKI := SqrtCondPoly.toSKI
+-- /-- Sqrt n = smallest k such that (k+1)² > n, i.e., the integer square root.
+--     Defined as `λ n. RFind (SqrtCond n)`. -/
+-- def SqrtPoly : SKI.Polynomial 1 := RFind ⬝' (SqrtCond ⬝' &0)
 
-/-- `SqrtCond ⬝ n ⬝ k` reduces to: return 0 if `(k+1)² > n`, else 1.
-    Used by `RFind` to locate the smallest such `k`, which is `√n`. -/
-theorem sqrtCond_def (cn ck : SKI) :
-    (SqrtCond ⬝ cn ⬝ ck) ↠
-      SKI.Cond ⬝ SKI.Zero ⬝ SKI.One ⬝
-        (SKI.Neg ⬝ (SKI.LE ⬝ (SKI.Mul ⬝ (SKI.Succ ⬝ ck) ⬝ (SKI.Succ ⬝ ck)) ⬝ cn)) :=
-  SqrtCondPoly.toSKI_correct [cn, ck] (by simp)
+-- /-- SKI term for integer square root -/
+-- def Sqrt : SKI := SqrtPoly.toSKI
 
-/-- Sqrt n = smallest k such that (k+1)² > n, i.e., the integer square root.
-    Defined as `λ n. RFind (SqrtCond n)`. -/
-def SqrtPoly : SKI.Polynomial 1 := RFind ⬝' (SqrtCond ⬝' &0)
+-- /-- `Sqrt ⬝ n` reduces to an `RFind` search for the smallest `k` with `(k+1)² > n`. -/
+-- theorem sqrt_def (cn : SKI) : (Sqrt ⬝ cn) ↠ RFind ⬝ (SqrtCond ⬝ cn) :=
+--   SqrtPoly.toSKI_correct [cn] (by simp)
 
-/-- SKI term for integer square root -/
-def Sqrt : SKI := SqrtPoly.toSKI
+-- /-- `Sqrt` correctly computes `Nat.sqrt`. -/
+-- theorem sqrt_correct (n : Nat) (cn : SKI) (hcn : IsChurch n cn) :
+--     IsChurch (Nat.sqrt n) (Sqrt ⬝ cn) := by
+--   apply isChurch_trans _ (sqrt_def cn)
+--   apply RFind_correct (fun k => if n < (k + 1) * (k + 1) then 0 else 1) (SqrtCond ⬝ cn)
+--   · -- SqrtCond ⬝ cn correctly computes the function
+--     intro i y hy
+--     apply isChurch_trans _ (sqrtCond_def cn y)
+--     have hsucc := succ_correct i y hy
+--     have hle := le_correct _ n _ cn (mul_correct hsucc hsucc) hcn
+--     have hneg := neg_correct _ _ hle
+--     apply isChurch_trans _ (cond_correct _ _ _ _ hneg)
+--     grind
+--   · -- fNat (Nat.sqrt n) = 0
+--     simp [Nat.lt_succ_sqrt]
+--   · -- ∀ i < Nat.sqrt n, fNat i ≠ 0
+--     grind [Nat.le_sqrt]
 
-/-- `Sqrt ⬝ n` reduces to an `RFind` search for the smallest `k` with `(k+1)² > n`. -/
-theorem sqrt_def (cn : SKI) : (Sqrt ⬝ cn) ↠ RFind ⬝ (SqrtCond ⬝ cn) :=
-  SqrtPoly.toSKI_correct [cn] (by simp)
+-- /-! ### Nat pairing (matching Mathlib's `Nat.pair`) -/
 
-/-- `Sqrt` correctly computes `Nat.sqrt`. -/
-theorem sqrt_correct (n : Nat) (cn : SKI) (hcn : IsChurch n cn) :
-    IsChurch (Nat.sqrt n) (Sqrt ⬝ cn) := by
-  apply isChurch_trans _ (sqrt_def cn)
-  apply RFind_correct (fun k => if n < (k + 1) * (k + 1) then 0 else 1) (SqrtCond ⬝ cn)
-  · -- SqrtCond ⬝ cn correctly computes the function
-    intro i y hy
-    apply isChurch_trans _ (sqrtCond_def cn y)
-    have hsucc := succ_correct i y hy
-    have hle := le_correct _ n _ cn (mul_correct hsucc hsucc) hcn
-    have hneg := neg_correct _ _ hle
-    apply isChurch_trans _ (cond_correct _ _ _ _ hneg)
-    grind
-  · -- fNat (Nat.sqrt n) = 0
-    simp [Nat.lt_succ_sqrt]
-  · -- ∀ i < Nat.sqrt n, fNat i ≠ 0
-    grind [Nat.le_sqrt]
+-- /-- NatPair a b = if a < b then b*b + a else a*a + a + b.
+--     With &0 = a, &1 = b. The condition `a < b` is `¬(b ≤ a)`. -/
+-- def NatPairPoly : SKI.Polynomial 2 :=
+--   SKI.Cond ⬝' (SKI.Add ⬝' (SKI.Mul ⬝' &1 ⬝' &1) ⬝' &0)
+--            ⬝' (SKI.Add ⬝' (SKI.Add ⬝' (SKI.Mul ⬝' &0 ⬝' &0) ⬝' &0) ⬝' &1)
+--            ⬝' (SKI.Neg ⬝' (SKI.LE ⬝' &1 ⬝' &0))
 
-/-! ### Nat pairing (matching Mathlib's `Nat.pair`) -/
+-- /-- SKI term for Nat pairing -/
+-- def NatPair : SKI := NatPairPoly.toSKI
 
-/-- NatPair a b = if a < b then b*b + a else a*a + a + b.
-    With &0 = a, &1 = b. The condition `a < b` is `¬(b ≤ a)`. -/
-def NatPairPoly : SKI.Polynomial 2 :=
-  SKI.Cond ⬝' (SKI.Add ⬝' (SKI.Mul ⬝' &1 ⬝' &1) ⬝' &0)
-           ⬝' (SKI.Add ⬝' (SKI.Add ⬝' (SKI.Mul ⬝' &0 ⬝' &0) ⬝' &0) ⬝' &1)
-           ⬝' (SKI.Neg ⬝' (SKI.LE ⬝' &1 ⬝' &0))
+-- /-- `NatPair ⬝ a ⬝ b` reduces to: if `a < b` then `b² + a`, else `a² + a + b`. -/
+-- theorem natPair_def (ca cb : SKI) :
+--     (NatPair ⬝ ca ⬝ cb) ↠
+--       SKI.Cond ⬝ (SKI.Add ⬝ (SKI.Mul ⬝ cb ⬝ cb) ⬝ ca)
+--                ⬝ (SKI.Add ⬝ (SKI.Add ⬝ (SKI.Mul ⬝ ca ⬝ ca) ⬝ ca) ⬝ cb)
+--                ⬝ (SKI.Neg ⬝ (SKI.LE ⬝ cb ⬝ ca)) :=
+--   NatPairPoly.toSKI_correct [ca, cb] (by simp)
 
-/-- SKI term for Nat pairing -/
-def NatPair : SKI := NatPairPoly.toSKI
+-- /-- `NatPair` correctly computes `Nat.pair`. -/
+-- theorem natPair_correct (a b : Nat) (ca cb : SKI)
+--     (ha : IsChurch a ca) (hb : IsChurch b cb) :
+--     IsChurch (Nat.pair a b) (NatPair ⬝ ca ⬝ cb) := by
+--   simp only [Nat.pair]
+--   apply isChurch_trans _ (natPair_def ca cb)
+--   have hcond := neg_correct _ _ (le_correct b a cb ca hb ha)
+--   apply isChurch_trans _ (cond_correct _ _ _ _ hcond)
+--   by_cases hab : a < b
+--   · grind [add_correct _ _ _ _ (mul_correct hb hb) ha]
+--   · grind [add_correct _ _ _ _ (add_correct _ _ _ _ (mul_correct ha ha) ha) hb]
 
-/-- `NatPair ⬝ a ⬝ b` reduces to: if `a < b` then `b² + a`, else `a² + a + b`. -/
-theorem natPair_def (ca cb : SKI) :
-    (NatPair ⬝ ca ⬝ cb) ↠
-      SKI.Cond ⬝ (SKI.Add ⬝ (SKI.Mul ⬝ cb ⬝ cb) ⬝ ca)
-               ⬝ (SKI.Add ⬝ (SKI.Add ⬝ (SKI.Mul ⬝ ca ⬝ ca) ⬝ ca) ⬝ cb)
-               ⬝ (SKI.Neg ⬝ (SKI.LE ⬝ cb ⬝ ca)) :=
-  NatPairPoly.toSKI_correct [ca, cb] (by simp)
+-- /-! ### Nat unpairing (matching Mathlib's `Nat.unpair`) -/
 
-/-- `NatPair` correctly computes `Nat.pair`. -/
-theorem natPair_correct (a b : Nat) (ca cb : SKI)
-    (ha : IsChurch a ca) (hb : IsChurch b cb) :
-    IsChurch (Nat.pair a b) (NatPair ⬝ ca ⬝ cb) := by
-  simp only [Nat.pair]
-  apply isChurch_trans _ (natPair_def ca cb)
-  have hcond := neg_correct _ _ (le_correct b a cb ca hb ha)
-  apply isChurch_trans _ (cond_correct _ _ _ _ hcond)
-  by_cases hab : a < b
-  · grind [add_correct _ _ _ _ (mul_correct hb hb) ha]
-  · grind [add_correct _ _ _ _ (add_correct _ _ _ _ (mul_correct ha ha) ha) hb]
+-- /-- `NatUnpairLeft n = if n - s² < s then n - s² else s` where `s = Nat.sqrt n`. -/
+-- def NatUnpairLeftPoly : SKI.Polynomial 1 :=
+--   let s := Sqrt ⬝' &0
+--   let s2 := SKI.Mul ⬝' s ⬝' s
+--   let diff := SKI.Sub ⬝' &0 ⬝' s2
+--   let cond := SKI.Neg ⬝' (SKI.LE ⬝' s ⬝' diff)
+--   SKI.Cond ⬝' diff ⬝' s ⬝' cond
 
-/-! ### Nat unpairing (matching Mathlib's `Nat.unpair`) -/
+-- /-- SKI term for left projection of Nat.unpair -/
+-- def NatUnpairLeft : SKI := NatUnpairLeftPoly.toSKI
 
-/-- `NatUnpairLeft n = if n - s² < s then n - s² else s` where `s = Nat.sqrt n`. -/
-def NatUnpairLeftPoly : SKI.Polynomial 1 :=
-  let s := Sqrt ⬝' &0
-  let s2 := SKI.Mul ⬝' s ⬝' s
-  let diff := SKI.Sub ⬝' &0 ⬝' s2
-  let cond := SKI.Neg ⬝' (SKI.LE ⬝' s ⬝' diff)
-  SKI.Cond ⬝' diff ⬝' s ⬝' cond
+-- /-- `NatUnpairLeft ⬝ n` reduces to: let `s = √n` and `d = n - s²`;
+--     return `d` if `d < s`, else `s`. -/
+-- theorem natUnpairLeft_def (cn : SKI) :
+--     (NatUnpairLeft ⬝ cn) ↠
+--       SKI.Cond ⬝ (SKI.Sub ⬝ cn ⬝ (SKI.Mul ⬝ (Sqrt ⬝ cn) ⬝ (Sqrt ⬝ cn)))
+--                ⬝ (Sqrt ⬝ cn)
+--                ⬝ (SKI.Neg ⬝ (SKI.LE ⬝ (Sqrt ⬝ cn)
+--                     ⬝ (SKI.Sub ⬝ cn ⬝ (SKI.Mul ⬝ (Sqrt ⬝ cn) ⬝ (Sqrt ⬝ cn))))) :=
+--   NatUnpairLeftPoly.toSKI_correct [cn] (by simp)
 
-/-- SKI term for left projection of Nat.unpair -/
-def NatUnpairLeft : SKI := NatUnpairLeftPoly.toSKI
+-- /-- Common Church numeral witnesses for `Nat.sqrt` and the difference `n - (Nat.sqrt n)²`. -/
+-- private theorem natUnpair_church (n : Nat) (cn : SKI) (hcn : IsChurch n cn) :
+--     IsChurch (Nat.sqrt n) (Sqrt ⬝ cn) ∧
+--     IsChurch (n - Nat.sqrt n * Nat.sqrt n)
+--       (SKI.Sub ⬝ cn ⬝ (SKI.Mul ⬝ (Sqrt ⬝ cn) ⬝ (Sqrt ⬝ cn))) := by
+--   have hs := sqrt_correct n cn hcn
+--   exact ⟨hs, sub_correct n _ cn _ hcn (mul_correct hs hs)⟩
 
-/-- `NatUnpairLeft ⬝ n` reduces to: let `s = √n` and `d = n - s²`;
-    return `d` if `d < s`, else `s`. -/
-theorem natUnpairLeft_def (cn : SKI) :
-    (NatUnpairLeft ⬝ cn) ↠
-      SKI.Cond ⬝ (SKI.Sub ⬝ cn ⬝ (SKI.Mul ⬝ (Sqrt ⬝ cn) ⬝ (Sqrt ⬝ cn)))
-               ⬝ (Sqrt ⬝ cn)
-               ⬝ (SKI.Neg ⬝ (SKI.LE ⬝ (Sqrt ⬝ cn)
-                    ⬝ (SKI.Sub ⬝ cn ⬝ (SKI.Mul ⬝ (Sqrt ⬝ cn) ⬝ (Sqrt ⬝ cn))))) :=
-  NatUnpairLeftPoly.toSKI_correct [cn] (by simp)
+-- /-- `NatUnpairLeft` correctly computes the first component of `Nat.unpair`. -/
+-- theorem natUnpairLeft_correct (n : Nat) (cn : SKI) (hcn : IsChurch n cn) :
+--     IsChurch (Nat.unpair n).1 (NatUnpairLeft ⬝ cn) := by
+--   apply isChurch_trans _ (natUnpairLeft_def cn)
+--   obtain ⟨hs, hdiff⟩ := natUnpair_church n cn hcn
+--   have hcond := neg_correct _ _ (le_correct _ _ _ _ hs hdiff)
+--   apply isChurch_trans _ (cond_correct _ _ _ _ hcond)
+--   by_cases h : n - n.sqrt ^ 2 < n.sqrt <;> grind [Nat.unpair]
 
-/-- Common Church numeral witnesses for `Nat.sqrt` and the difference `n - (Nat.sqrt n)²`. -/
-private theorem natUnpair_church (n : Nat) (cn : SKI) (hcn : IsChurch n cn) :
-    IsChurch (Nat.sqrt n) (Sqrt ⬝ cn) ∧
-    IsChurch (n - Nat.sqrt n * Nat.sqrt n)
-      (SKI.Sub ⬝ cn ⬝ (SKI.Mul ⬝ (Sqrt ⬝ cn) ⬝ (Sqrt ⬝ cn))) := by
-  have hs := sqrt_correct n cn hcn
-  exact ⟨hs, sub_correct n _ cn _ hcn (mul_correct hs hs)⟩
+-- /-- NatUnpairRight n = let s = sqrt n in if n - s² < s then s else n - s² - s. -/
+-- def NatUnpairRightPoly : SKI.Polynomial 1 :=
+--   let s := Sqrt ⬝' &0
+--   let s2 := SKI.Mul ⬝' s ⬝' s
+--   let diff := SKI.Sub ⬝' &0 ⬝' s2
+--   let cond := SKI.Neg ⬝' (SKI.LE ⬝' s ⬝' diff)
+--   SKI.Cond ⬝' s ⬝' (SKI.Sub ⬝' diff ⬝' s) ⬝' cond
 
-/-- `NatUnpairLeft` correctly computes the first component of `Nat.unpair`. -/
-theorem natUnpairLeft_correct (n : Nat) (cn : SKI) (hcn : IsChurch n cn) :
-    IsChurch (Nat.unpair n).1 (NatUnpairLeft ⬝ cn) := by
-  apply isChurch_trans _ (natUnpairLeft_def cn)
-  obtain ⟨hs, hdiff⟩ := natUnpair_church n cn hcn
-  have hcond := neg_correct _ _ (le_correct _ _ _ _ hs hdiff)
-  apply isChurch_trans _ (cond_correct _ _ _ _ hcond)
-  by_cases h : n - n.sqrt ^ 2 < n.sqrt <;> grind [Nat.unpair]
+-- /-- SKI term for right projection of Nat.unpair -/
+-- def NatUnpairRight : SKI := NatUnpairRightPoly.toSKI
 
-/-- NatUnpairRight n = let s = sqrt n in if n - s² < s then s else n - s² - s. -/
-def NatUnpairRightPoly : SKI.Polynomial 1 :=
-  let s := Sqrt ⬝' &0
-  let s2 := SKI.Mul ⬝' s ⬝' s
-  let diff := SKI.Sub ⬝' &0 ⬝' s2
-  let cond := SKI.Neg ⬝' (SKI.LE ⬝' s ⬝' diff)
-  SKI.Cond ⬝' s ⬝' (SKI.Sub ⬝' diff ⬝' s) ⬝' cond
+-- /-- `NatUnpairRight ⬝ n` reduces to: let `s = √n` and `d = n - s²`;
+--     return `s` if `d < s`, else `d - s`. -/
+-- theorem natUnpairRight_def (cn : SKI) :
+--     (NatUnpairRight ⬝ cn) ↠
+--       SKI.Cond ⬝ (Sqrt ⬝ cn)
+--                ⬝ (SKI.Sub ⬝ (SKI.Sub ⬝ cn ⬝ (SKI.Mul ⬝ (Sqrt ⬝ cn) ⬝ (Sqrt ⬝ cn)))
+--                             ⬝ (Sqrt ⬝ cn))
+--                ⬝ (SKI.Neg ⬝ (SKI.LE ⬝ (Sqrt ⬝ cn)
+--                     ⬝ (SKI.Sub ⬝ cn ⬝ (SKI.Mul ⬝ (Sqrt ⬝ cn) ⬝ (Sqrt ⬝ cn))))) :=
+--   NatUnpairRightPoly.toSKI_correct [cn] (by simp)
 
-/-- SKI term for right projection of Nat.unpair -/
-def NatUnpairRight : SKI := NatUnpairRightPoly.toSKI
-
-/-- `NatUnpairRight ⬝ n` reduces to: let `s = √n` and `d = n - s²`;
-    return `s` if `d < s`, else `d - s`. -/
-theorem natUnpairRight_def (cn : SKI) :
-    (NatUnpairRight ⬝ cn) ↠
-      SKI.Cond ⬝ (Sqrt ⬝ cn)
-               ⬝ (SKI.Sub ⬝ (SKI.Sub ⬝ cn ⬝ (SKI.Mul ⬝ (Sqrt ⬝ cn) ⬝ (Sqrt ⬝ cn)))
-                            ⬝ (Sqrt ⬝ cn))
-               ⬝ (SKI.Neg ⬝ (SKI.LE ⬝ (Sqrt ⬝ cn)
-                    ⬝ (SKI.Sub ⬝ cn ⬝ (SKI.Mul ⬝ (Sqrt ⬝ cn) ⬝ (Sqrt ⬝ cn))))) :=
-  NatUnpairRightPoly.toSKI_correct [cn] (by simp)
-
-/-- `NatUnpairRight` correctly computes the second component of `Nat.unpair`. -/
-theorem natUnpairRight_correct (n : Nat) (cn : SKI) (hcn : IsChurch n cn) :
-    IsChurch (Nat.unpair n).2 (NatUnpairRight ⬝ cn) := by
-  apply isChurch_trans _ (natUnpairRight_def cn)
-  obtain ⟨hs, hdiff⟩ := natUnpair_church n cn hcn
-  have hcond := neg_correct _ _ (le_correct _ _ _ _ hs hdiff)
-  apply isChurch_trans _ (cond_correct _ _ _ _ hcond)
-  grind [Nat.unpair, sub_correct _ _ _ _ hdiff hs]
+-- /-- `NatUnpairRight` correctly computes the second component of `Nat.unpair`. -/
+-- theorem natUnpairRight_correct (n : Nat) (cn : SKI) (hcn : IsChurch n cn) :
+--     IsChurch (Nat.unpair n).2 (NatUnpairRight ⬝ cn) := by
+--   apply isChurch_trans _ (natUnpairRight_def cn)
+--   obtain ⟨hs, hdiff⟩ := natUnpair_church n cn hcn
+--   have hcond := neg_correct _ _ (le_correct _ _ _ _ hs hdiff)
+--   apply isChurch_trans _ (cond_correct _ _ _ _ hcond)
+--   grind [Nat.unpair, sub_correct _ _ _ _ hdiff hs]
 
 end SKI
 
