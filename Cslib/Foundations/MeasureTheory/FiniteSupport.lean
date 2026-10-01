@@ -50,18 +50,76 @@ class HasFiniteSupport {α : Type*} [MeasurableSpace α] (μ : Measure α) : Pro
   /-- Some finite set has null complement. -/
   exists_finite_measure_compl_zero : ∃ s : Set α, s.Finite ∧ μ sᶜ = 0
 
+namespace Measure
+
+open HasFiniteSupport
+
+def supp {α : Type*} [MeasurableSpace α] (μ : Measure α) : Set α := ⋂₀ {s | μ sᶜ = 0}
+
+lemma mem_supp_iff {α : Type*} [MeasurableSpace α] {μ : Measure α} {x : α} :
+    x ∈ μ.supp ↔ μ {x} ≠ 0 := by
+  rw [supp, mem_sInter]
+  contrapose!
+  constructor
+  · intro ⟨t, ht, hmem⟩
+    exact μ.mono_null (singleton_subset_iff.mpr hmem) ht
+  · intro h
+    use {x}ᶜ
+    simpa
+
+variable {α : Type*} [MeasurableSpace α] {μ : Measure α} [HasFiniteSupport μ]
+
+lemma supp_finite : μ.supp.Finite := by
+  obtain ⟨s, hs, hnull⟩ := exists_finite_measure_compl_zero (μ := μ)
+  refine Set.Finite.subset hs <| sInter_subset_of_mem hnull
+
+@[simp] lemma measure_supp_compl : μ μ.suppᶜ = 0 := by
+  obtain ⟨s, hs, hnull⟩ := exists_finite_measure_compl_zero (μ := μ)
+  have heq : μ.supp = ⋂₀ {t | t ⊆ s ∧ μ tᶜ = 0} := by
+    refine subset_antisymm (sInter_subset_sInter fun _ ⟨_, h⟩ => h) ?_
+    intro a h t (ht : μ tᶜ = 0)
+    refine inter_subset_right <| h (s ∩ t) ⟨inter_subset_left, ?_⟩
+    simp [compl_inter, hnull, ht]
+  have hcount : {t | t ⊆ s ∧ μ tᶜ = 0}.Countable := (hs.powerset.subset <| by grind).countable
+  rw [heq, compl_sInter, measure_sUnion_null_iff (hcount.image _)]
+  rintro _ ⟨t, ⟨-, ht⟩, rfl⟩
+  exact ht
+
+lemma ae_mem_supp : ∀ᵐ (a : α) ∂μ, a ∈ μ.supp := μ.measure_supp_compl
+
 /-- On a space with measurable singletons, a measure with finite support is a finite sum
 of Dirac measures weighted by its singleton masses. This is `Measure.ae_mem_finset_iff`
 applied to a finite support. -/
-theorem HasFiniteSupport.exists_eq_sum_smul_dirac {α : Type*} [MeasurableSpace α]
-    [MeasurableSingletonClass α] (μ : Measure α) [HasFiniteSupport μ] :
+theorem exists_eq_sum_smul_dirac [MeasurableSingletonClass α] :
     ∃ s : Finset α, μ = ∑ a ∈ s, μ {a} • Measure.dirac a := by
-  obtain ⟨s, hs, hμ⟩ := HasFiniteSupport.exists_finite_measure_compl_zero (μ := μ)
-  refine ⟨hs.toFinset, Measure.ae_mem_finset_iff.mp ?_⟩
-  change μ (hs.toFinset : Set α)ᶜ = 0
-  simpa using hμ
+  refine ⟨μ.supp_finite.toFinset, Measure.ae_mem_finset_iff.mp ?_⟩
+  simpa using μ.ae_mem_supp
 
-/-- A finite set has finite measure under a sigma-finite measure. TODO: delete once [Mathlib PR 44381](https://github.com/leanprover-community/mathlib4/pull/44381) is available. -/
+lemma measure_eq_measure_inter_supp {s : Set α} : μ s = μ (s ∩ μ.supp) := by
+  refine le_antisymm ?_ (measure_mono inter_subset_left)
+  nth_rw 1 [← inter_union_sdiff s (μ.supp)]
+  convert measure_union_le (μ := μ) (s ∩ μ.supp) (s \ μ.supp)
+  simp [measure_mono_null (sdiff_subset_compl ..) measure_supp_compl]
+
+@[simp] lemma measure_supp : μ μ.supp = μ .univ := by
+  simpa using measure_eq_measure_inter_supp (s := .univ) |>.symm
+
+lemma supp_subset_iff {s : Set α} : μ.supp ⊆ s ↔ μ sᶜ = 0 := by
+  refine ⟨?_, sInter_subset_of_mem (S := {s | μ sᶜ = 0})⟩
+  rw [← le_zero_iff, ← measure_supp_compl (μ := μ)]
+  exact (measure_mono <| compl_subset_compl.mpr ·)
+
+lemma nullMeasurableSet_supp : NullMeasurableSet μ.supp μ :=
+  compl_compl μ.supp ▸ (NullMeasurableSet.of_null measure_supp_compl).compl
+
+/-- See also `MeasureTheory.Measure.restrict_eq_self_of_ae_mem` for an alternate path to this
+result (which would use that `μ (supp μ)ᶜ = 0`). -/
+theorem eq_restrict_supp : μ.restrict μ.supp = μ  := μ.restrict_eq_self_of_ae_mem μ.ae_mem_supp
+
+end Measure
+
+/-- A finite set has finite measure under a sigma-finite measure. TODO: delete once
+[Mathlib PR 44381](https://github.com/leanprover-community/mathlib4/pull/44381) is available. -/
 theorem _root_.Set.Finite.measure_lt_top_of_sigmaFinite {α : Type*} [MeasurableSpace α]
     {μ : Measure α} [SigmaFinite μ] {s : Set α} (hs : s.Finite) : μ s < ∞ := by
   simpa using measure_biUnion_lt_top hs
@@ -72,9 +130,8 @@ theorem _root_.Set.Finite.measure_lt_top_of_sigmaFinite {α : Type*} [Measurable
 instance (priority := 100) HasFiniteSupport.isFiniteMeasure {α : Type*} [MeasurableSpace α]
     (μ : Measure α) [HasFiniteSupport μ] [SigmaFinite μ] : IsFiniteMeasure μ where
   measure_univ_lt_top := by
-    obtain ⟨s, hs, hμ⟩ := HasFiniteSupport.exists_finite_measure_compl_zero (μ := μ)
-    rw [← union_compl_self s]
-    exact measure_union_lt_top hs.measure_lt_top_of_sigmaFinite (by simp [hμ])
+    rw [← μ.measure_supp]
+    exact μ.supp_finite.measure_lt_top_of_sigmaFinite
 
 /-- On a space with measurable singletons, every set is null-measurable for a measure
 with finite support. -/
@@ -85,6 +142,47 @@ theorem NullMeasurableSet.of_hasFiniteSupport {α : Type*} [MeasurableSpace α]
   rw [← inter_union_sdiff t s]
   exact (hs.subset inter_subset_right).measurableSet.nullMeasurableSet.union_null
     (measure_mono_null (sdiff_subset_compl t s) hμ)
+
+instance {α : Type*} [Finite α] [MeasurableSpace α] (μ : Measure α) : HasFiniteSupport μ where
+  exists_finite_measure_compl_zero := by use Set.univ; simp
+
+theorem HasFiniteSupport.map {α β : Type*} [MeasurableSpace α] [MeasurableSpace β] (μ : Measure α)
+    [HasFiniteSupport μ] [MeasurableSingletonClass β] {f : α → β} (hf : AEMeasurable f μ) :
+    HasFiniteSupport (μ.map f) where
+  exists_finite_measure_compl_zero := by
+    use f '' μ.supp, μ.supp_finite.image f
+    rw [Measure.map_apply_of_aemeasurable hf (μ.supp_finite.image f).measurableSet.compl,
+      Set.preimage_compl]
+    apply Measure.mono_null ?_ μ.measure_supp_compl
+    exact compl_subset_compl_of_subset <| Set.subset_preimage_image f μ.supp
+
+instance {α β : Type*} [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
+    [MeasurableSingletonClass β] (μ : Measure α) [HasFiniteSupport μ] (f : α → β) :
+    HasFiniteSupport (μ.map f) := .map μ .of_discrete
+
+instance {α : Type*} [MeasurableSpace α] (μ ν : Measure α) [HasFiniteSupport μ]
+    [HasFiniteSupport ν] : HasFiniteSupport (μ + ν) where
+  exists_finite_measure_compl_zero := by
+    use μ.supp ∪ ν.supp, μ.supp_finite.union ν.supp_finite
+    rw [compl_union, Measure.coe_add, Pi.add_apply, add_eq_zero]
+    exact ⟨μ.mono_null Set.inter_subset_left μ.measure_supp_compl,
+      ν.mono_null Set.inter_subset_right ν.measure_supp_compl⟩
+
+instance {α ι : Type*} [MeasurableSpace α] (s : Finset ι) (μ : ι → Measure α)
+    [∀ i, HasFiniteSupport (μ i)] : HasFiniteSupport (∑ i ∈ s, μ i) where
+  exists_finite_measure_compl_zero := by
+    refine ⟨⋃ i ∈ s, (μ i).supp, s.finite_toSet.biUnion ?_, ?_⟩
+    · intro i _
+      exact (μ i).supp_finite
+    · simp_rw [compl_iUnion, Measure.coe_finsetSum, Finset.sum_apply, Finset.sum_eq_zero_iff]
+      intro i h
+      exact (μ i).mono_null (iInter₂_subset i h) (μ i).measure_supp_compl
+
+instance {α : Type*} [MeasurableSpace α] [MeasurableSingletonClass α] (x : α) :
+    HasFiniteSupport (Measure.dirac x) where
+  exists_finite_measure_compl_zero := by
+    use {x}, Set.finite_singleton x
+    simp
 
 instance {ι : Type*} [Fintype ι] {X : ι → Type*} [∀ i, MeasurableSpace (X i)]
     (μ : ∀ i, Measure (X i)) [∀ i, HasFiniteSupport (μ i)] [∀ i, IsFiniteMeasure (μ i)] :
