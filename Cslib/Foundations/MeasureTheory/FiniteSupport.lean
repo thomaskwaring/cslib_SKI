@@ -9,6 +9,7 @@ module
 public import Cslib.Init
 public import Mathlib.MeasureTheory.Constructions.Pi
 public import Mathlib.MeasureTheory.Measure.Dirac.Basic
+public import Mathlib.MeasureTheory.Integral.IntegrableOn
 
 /-! # Measures supported on finite sets
 
@@ -114,7 +115,7 @@ lemma nullMeasurableSet_supp : NullMeasurableSet μ.supp μ :=
 
 /-- See also `MeasureTheory.Measure.restrict_eq_self_of_ae_mem` for an alternate path to this
 result (which would use that `μ (supp μ)ᶜ = 0`). -/
-theorem eq_restrict_supp : μ.restrict μ.supp = μ  := μ.restrict_eq_self_of_ae_mem μ.ae_mem_supp
+theorem restrict_supp_eq : μ.restrict μ.supp = μ  := μ.restrict_eq_self_of_ae_mem μ.ae_mem_supp
 
 end Measure
 
@@ -143,22 +144,32 @@ theorem NullMeasurableSet.of_hasFiniteSupport {α : Type*} [MeasurableSpace α]
   exact (hs.subset inter_subset_right).measurableSet.nullMeasurableSet.union_null
     (measure_mono_null (sdiff_subset_compl t s) hμ)
 
+theorem HasFiniteSupport.integrable {α β : Type*} [MeasurableSpace α] [MeasurableSingletonClass α]
+    (μ : Measure α) [HasFiniteSupport μ] [SigmaFinite μ] [NormedAddCommGroup β] (f : α → β) :
+    Integrable f μ := by
+  have : IntegrableOn f μ.supp μ := .of_finite μ.supp_finite
+  rwa [IntegrableOn, μ.restrict_supp_eq] at this
+
 instance {α : Type*} [Finite α] [MeasurableSpace α] (μ : Measure α) : HasFiniteSupport μ where
   exists_finite_measure_compl_zero := by use Set.univ; simp
 
+instance {α : Type*} [MeasurableSpace α] : HasFiniteSupport (0 : Measure α) := ⟨∅, by simp⟩
+
 theorem HasFiniteSupport.map {α β : Type*} [MeasurableSpace α] [MeasurableSpace β] (μ : Measure α)
-    [HasFiniteSupport μ] [MeasurableSingletonClass β] {f : α → β} (hf : AEMeasurable f μ) :
+    [HasFiniteSupport μ] {f : α → β} (hf : AEMeasurable f μ)
+    (hsupp : NullMeasurableSet (f '' μ.supp) (μ.map f)) :
     HasFiniteSupport (μ.map f) where
   exists_finite_measure_compl_zero := by
     use f '' μ.supp, μ.supp_finite.image f
-    rw [Measure.map_apply_of_aemeasurable hf (μ.supp_finite.image f).measurableSet.compl,
+    rw [Measure.map_apply₀ hf hsupp.compl,
       Set.preimage_compl]
     apply Measure.mono_null ?_ μ.measure_supp_compl
     exact compl_subset_compl_of_subset <| Set.subset_preimage_image f μ.supp
 
 instance {α β : Type*} [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
     [MeasurableSingletonClass β] (μ : Measure α) [HasFiniteSupport μ] (f : α → β) :
-    HasFiniteSupport (μ.map f) := .map μ .of_discrete
+    HasFiniteSupport (μ.map f) :=
+  .map μ .of_discrete (μ.supp_finite.image f).measurableSet.nullMeasurableSet
 
 instance {α : Type*} [MeasurableSpace α] (μ ν : Measure α) [HasFiniteSupport μ]
     [HasFiniteSupport ν] : HasFiniteSupport (μ + ν) where
@@ -177,6 +188,9 @@ instance {α ι : Type*} [MeasurableSpace α] (s : Finset ι) (μ : ι → Measu
     · simp_rw [compl_iUnion, Measure.coe_finsetSum, Finset.sum_apply, Finset.sum_eq_zero_iff]
       intro i h
       exact (μ i).mono_null (iInter₂_subset i h) (μ i).measure_supp_compl
+
+instance {α : Type*} [MeasurableSpace α] (μ : Measure α) [HasFiniteSupport μ] (c : ℝ≥0∞) :
+    HasFiniteSupport (c • μ) := ⟨μ.supp, μ.supp_finite, by simp⟩
 
 instance {α : Type*} [MeasurableSpace α] [MeasurableSingletonClass α] (x : α) :
     HasFiniteSupport (Measure.dirac x) where
