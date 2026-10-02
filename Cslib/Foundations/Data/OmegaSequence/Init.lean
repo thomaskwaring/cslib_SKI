@@ -251,6 +251,8 @@ theorem cons_append_ωSequence (a : α) (l : List α) (s : ωSequence α) :
     appendωSequence (a :: l) s = a ::ω appendωSequence l s :=
   rfl
 
+theorem singelton_append_ωSequence (a : α) (s : ωSequence α) : [a] ++ω s = a ::ω s := rfl
+
 @[simp, scoped grind =]
 theorem append_append_ωSequence : ∀ (l₁ l₂ : List α) (s : ωSequence α),
     l₁ ++ l₂ ++ω s = l₁ ++ω (l₂ ++ω s)

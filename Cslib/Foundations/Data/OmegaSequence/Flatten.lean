@@ -70,7 +70,7 @@ theorem cumLen_segment_one_add {ls : ωSequence (List α)} (h_ls : ∀ k, (ls k)
   have h_lower := segment_lower_bound h_mono rfl (n - (ls 0).length)
   have h_upper := segment_upper_bound h_mono rfl (n - (ls 0).length)
   apply segment_range_val (cumLen_strictMono h_ls) <;>
-    simp only [Nat.add_assoc, cumLen_one_add_drop] <;> omega
+    simp only [Nat.add_assoc, cumLen_one_add_drop] <;> lia
 
 /-- Given an ω-sequence `ls` of lists, `ls.flatten` is the infinite sequence
 formed by the concatenation of all of them.  For the definition to make proper
@@ -82,14 +82,26 @@ theorem flatten_def [Inhabited α] (ls : ωSequence (List α)) (n : ℕ) :
     flatten ls n = (ls (segment ls.cumLen n))[n - ls.cumLen (segment ls.cumLen n)]! :=
   rfl
 
+theorem flatten_get_add [Inhabited α] (ls : ωSequence (List α)) {n k : ℕ}
+    (hk : k < (ls n).length) (hpos : ∀ n, 0 < (ls n).length) :
+    ls.flatten (ls.cumLen n + k) = (ls n)[k] := by
+  have := segment_range_val (cumLen_strictMono hpos) (ls.cumLen n |>.le_add_right k)
+    (by lia [cumLen_succ])
+  simp [flatten_def, this, hk]
+
+theorem flatten_get_cumLen [Inhabited α] (ls : ωSequence (List α)) {n : ℕ}
+    (hpos : ∀ n, 0 < (ls n).length) : ls.flatten (ls.cumLen n) = (ls n)[0]'(hpos n) :=
+  ls.flatten_get_add (hpos n) hpos
+
 /-- `ls.flatten` equals the concatenation of `ls.head` and `ls.tail.flatten`. -/
 @[simp, scoped grind =]
-theorem cons_flatten [Inhabited α] {ls : ωSequence (List α)} (h_ls : ∀ k, (ls k).length > 0) :
+theorem cons_flatten [Inhabited α] {ls : ωSequence (List α)} (h_ls : ∀ k, 0 < (ls k).length) :
     ls.head ++ω ls.tail.flatten = ls.flatten := by
   ext n; rw [flatten_def, head, tail_eq_drop]
-  rcases (show n < (ls 0).length ∨ n ≥ (ls 0).length by omega) with h_n | h_n
-  · simp (disch := omega) [get_append_left, cumLen_segment_zero, cumLen_zero]
-  · simp (disch := omega) [get_append_right', flatten_def, cumLen_segment_one_add,
+  rcases (show n < (ls 0).length ∨ (ls 0).length ≤ n by lia) with h_n | h_n
+  · simp [get_append_left _ _ _ h_n, cumLen_segment_zero h_ls n h_n, cumLen_zero,
+      getElem?_pos (ls 0) n h_n]
+  · simp [get_append_right' h_n, flatten_def, cumLen_segment_one_add h_ls _ h_n,
       cumLen_one_add_drop]
     grind
 
@@ -160,7 +172,7 @@ theorem segment_toSegs_cumLen {f : ℕ → ℕ}
     (hm : StrictMono f) (h0 : f 0 = 0) (s : ωSequence α) :
     (s.toSegs f).cumLen = f := by
   ext n
-  have (n' : ℕ) := hm (show n' < n' + 1 by omega)
+  have (n' : ℕ) := hm (show n' < n' + 1 by lia)
   induction n <;> grind [toSegs_def]
 
 /-- `(s.toSegs f).flatten` is `s` itself. -/
