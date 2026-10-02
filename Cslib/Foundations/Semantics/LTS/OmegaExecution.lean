@@ -77,8 +77,8 @@ theorem OmegaExecution.append
   · rw [← ss.eta, drop_append_of_le_length _ _ _ (by grind), tail_cons,
       ← singelton_append_ωSequence]
     congr
-    rw [head, hm, ← sl.take_append_getLast he.nonEmpty_states, sl.take_append_getLast,
-      he.length', sl.drop_length_sub_one he.nonEmpty_states, he.getLast]
+    rw [head, hm, ← sl.take_append_getLast he.ss_ne_nil, sl.take_append_getLast,
+      he.length', sl.drop_length_sub_one he.ss_ne_nil, he.getLast]
 
 open Nat in
 /-- Concatenating an infinite sequence of finite executions, with an explicit expression for the

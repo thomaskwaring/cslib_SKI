@@ -235,7 +235,7 @@ theorem buchiFamily_saturation [Inhabited Symbol] :
   obtain ⟨m, _, s, h_acc, h_mem⟩ :=
     frequently_atTop.mp ((frequently_via_accept h_acc h_exec h_xls_p).mono h_yls_a) n
   obtain ⟨k, hklen, rfl⟩ := List.mem_iff_getElem.mp h_mem
-  rw [← sl.dropLast_append_getLast h_yl_e.nonEmpty_states, append_append_ωSequence,
+  rw [← sl.dropLast_append_getLast h_yl_e.ss_ne_nil, append_append_ωSequence,
     singelton_append_ωSequence, h_yl_e.getLast, ← h_fst, cons_head_tail]
   -- up to some messing around with indices, we use the same witness for `y`
   refine ⟨sl.dropLast.length + yls.cumLen m + k,
