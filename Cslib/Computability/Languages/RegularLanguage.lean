@@ -248,14 +248,12 @@ theorem IsRegular.char (a : Symbol) : ({[a]} : Language Symbol).IsRegular := by
   induction xs using List.reverseRec with
   | nil => grind [Accepts, Language.mem_singleton]
   | append_singleton xs x ih =>
-    simp only [mem_language, Accepts, Language.mem_singleton, FLTS.mtr_concat_eq] at ih ⊢
-    induction xs using List.reverseRec with
-    | nil => simp [flts]
-    | append_singleton xs x' ih =>
-      simp_rw [FLTS.mtr_concat_eq, Set.mem_singleton_iff, h_eq1, h_ne_0, false_and, append_assoc,
-        false_iff]
+    obtain (rfl | ⟨xs, x, rfl⟩) : xs = [] ∨ ∃ xs' x, xs = xs' ++ [x] := xs.eq_nil_or_concat'
+    · simp [Accepts, flts, FLTS.mtr]
+    · simp_rw [Language.mem_singleton, mem_language, Accepts, FLTS.mtr_concat_eq,
+        Set.mem_singleton_iff, h_eq1, h_ne_0, false_and, append_assoc, false_iff]
       intro h
-      simpa using congr_arg List.length h
+      simpa using congr(List.length $h)
 
 /-- Languages matching regular expressions are regular. -/
 theorem IsRegular.regex {r : RegularExpression Symbol} :
