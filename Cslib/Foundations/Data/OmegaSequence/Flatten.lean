@@ -98,7 +98,7 @@ theorem flatten_get_cumLen [Inhabited α] (ls : ωSequence (List α)) {n : ℕ}
 theorem cons_flatten [Inhabited α] {ls : ωSequence (List α)} (h_ls : ∀ k, 0 < (ls k).length) :
     ls.head ++ω ls.tail.flatten = ls.flatten := by
   ext n; rw [flatten_def, head, tail_eq_drop]
-  rcases (show n < (ls 0).length ∨ (ls 0).length ≤ n by lia) with h_n | h_n
+  obtain (h_n | h_n) : n < (ls 0).length ∨ (ls 0).length ≤ n := n.lt_or_ge (ls 0).length
   · simp [get_append_left _ _ _ h_n, cumLen_segment_zero h_ls n h_n, cumLen_zero,
       getElem?_pos (ls 0) n h_n]
   · simp [get_append_right' h_n, flatten_def, cumLen_segment_one_add h_ls _ h_n,
