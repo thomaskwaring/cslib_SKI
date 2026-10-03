@@ -32,7 +32,7 @@ according to `na` iff for every pair of states `s` and `t` of `na`, both of the
 following two conditions hold:
 (1) `u` can move `na` from `s` to `t` iff `v` can move `na` from `s` to `t`;
 (2) `u` can move `na` from `s` to `t` via an accepting states iff `v` can move `na`
-from `s` to `t` via an acceptingg states. -/
+from `s` to `t` via an accepting states. -/
 @[implicit_reducible]
 def BuchiCongruence (na : Buchi State Symbol) : RightCongruence Symbol where
   eq.r u v :=
@@ -160,7 +160,7 @@ private lemma frequently_via_accept [Inhabited Symbol]
     {xl : List Symbol} {xls : ωSequence (List Symbol)} {ss : ωSequence State}
     (h_acc : ∃ᶠ (k : ℕ) in atTop, ss k ∈ na.accept)
     (h_exec : na.OmegaExecution ss (xl ++ω xls.flatten))
-    (h_xls_p : ∀ (k : ℕ), (xls k).length > 0) :
+    (h_xls_p : ∀ (k : ℕ), 0 < (xls k).length) :
     ∃ᶠ (k : ℕ) in atTop, xls k ∈ na.pairViaLang na.accept
       (ss (xl.length + xls.cumLen k)) (ss (xl.length + xls.cumLen (k + 1))) := by
   have hm : StrictMono (xl.length + xls.cumLen ·) := by grind [StrictMono, cumLen_strictMono]

@@ -251,7 +251,8 @@ theorem cons_append_ωSequence (a : α) (l : List α) (s : ωSequence α) :
     appendωSequence (a :: l) s = a ::ω appendωSequence l s :=
   rfl
 
-theorem singelton_append_ωSequence (a : α) (s : ωSequence α) : [a] ++ω s = a ::ω s := rfl
+@[simp] theorem singleton_append_ωSequence (a : α) (s : ωSequence α) :
+  [a] ++ω s = a ::ω s := rfl
 
 @[simp, scoped grind =]
 theorem append_append_ωSequence : ∀ (l₁ l₂ : List α) (s : ωSequence α),
@@ -477,7 +478,7 @@ theorem extract_eq_nil {xs : ωSequence α} {n : ℕ} :
 
 @[simp, scoped grind =]
 theorem extract_eq_nil_iff {xs : ωSequence α} {m n : ℕ} :
-    xs.extract m n = [] ↔ m ≥ n := by
+    xs.extract m n = [] ↔ n ≤ m := by
   rw [← List.length_eq_zero_iff]
   grind [extract_eq_drop_take]
 

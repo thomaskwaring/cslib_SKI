@@ -75,7 +75,7 @@ theorem OmegaExecution.append
   · rw [get_append_left _ _ _ he.length_ss_pos, he.start]
   · rw [← he.last', get_append_left]
   · rw [← ss.eta, drop_append_of_le_length _ _ _ (by grind), tail_cons,
-      ← singelton_append_ωSequence]
+      ← singleton_append_ωSequence]
     congr
     rw [head, hm, ← sl.take_append_getLast he.ss_ne_nil, sl.take_append_getLast,
       he.length', sl.drop_length_sub_one he.ss_ne_nil, he.getLast]

@@ -52,18 +52,18 @@ theorem cumLen_one_add_drop (ls : ωSequence (List α)) (k : ℕ) :
   induction k <;> grind
 
 /-- If all lists in `ls` are nonempty, then `ls.cumLen` is strictly monotonic. -/
-theorem cumLen_strictMono {ls : ωSequence (List α)} (h_ls : ∀ k, (ls k).length > 0) :
+theorem cumLen_strictMono {ls : ωSequence (List α)} (h_ls : ∀ k, 0 < (ls k).length) :
     StrictMono ls.cumLen := by
   grind [strictMono_nat_of_lt_succ]
 
 @[simp, scoped grind =]
-theorem cumLen_segment_zero {ls : ωSequence (List α)} (h_ls : ∀ k, (ls k).length > 0)
+theorem cumLen_segment_zero {ls : ωSequence (List α)} (h_ls : ∀ k, 0 < (ls k).length)
     (n : ℕ) (h_n : n < (ls 0).length) : segment ls.cumLen n = 0 := by
   have h0 : ls.cumLen 0 ≤ n := by simp [cumLen_zero]
   have h1 : n < ls.cumLen 1 := by simpa [cumLen_succ, cumLen_zero]
   exact segment_range_val (cumLen_strictMono h_ls) h0 h1
 
-theorem cumLen_segment_one_add {ls : ωSequence (List α)} (h_ls : ∀ k, (ls k).length > 0)
+theorem cumLen_segment_one_add {ls : ωSequence (List α)} (h_ls : ∀ k, 0 < (ls k).length)
     (n : ℕ) (h_n : (ls 0).length ≤ n) :
     segment ls.cumLen n = 1 + segment (ls.drop 1).cumLen (n - (ls 0).length) := by
   have h_mono := cumLen_strictMono (ls := ls.drop 1) (fun k => h_ls (k + 1))
@@ -107,7 +107,7 @@ theorem cons_flatten [Inhabited α] {ls : ωSequence (List α)} (h_ls : ∀ k, 0
 
 /-- `ls.flatten` equals the concatenation of `(ls.take n).flatten` and `(ls.drop n).flatten`. -/
 @[simp, scoped grind =]
-theorem append_flatten [Inhabited α] {ls : ωSequence (List α)} (h_ls : ∀ k, (ls k).length > 0)
+theorem append_flatten [Inhabited α] {ls : ωSequence (List α)} (h_ls : ∀ k, 0 < (ls k).length)
     (n : ℕ) : (ls.take n).flatten ++ω (ls.drop n).flatten = ls.flatten := by
   induction n generalizing ls <;> grind [tail_eq_drop, take_succ]
 
@@ -120,7 +120,7 @@ theorem map_length_take_sum {ls : ωSequence (List α)} (n : ℕ) :
 /-- In fact, `(ls.take n).flatten` is `ls.flatten.take (ls.cumLen n)`
 and `(ls.drop n).flatten` is `ls.flatten.drop (ls.cumLen n)`. -/
 theorem flatten_take_drop [Inhabited α]
-    {ls : ωSequence (List α)} (h_ls : ∀ k, (ls k).length > 0) (n : ℕ) :
+    {ls : ωSequence (List α)} (h_ls : ∀ k, 0 < (ls k).length) (n : ℕ) :
     (ls.take n).flatten = ls.flatten.take (ls.cumLen n) ∧
     (ls.drop n).flatten = ls.flatten.drop (ls.cumLen n) := by
   apply append_left_right_injective
@@ -128,27 +128,27 @@ theorem flatten_take_drop [Inhabited α]
   · simp
 
 theorem flatten_take [Inhabited α]
-    {ls : ωSequence (List α)} (h_ls : ∀ k, (ls k).length > 0) (n : ℕ) :
+    {ls : ωSequence (List α)} (h_ls : ∀ k, 0 < (ls k).length) (n : ℕ) :
     (ls.take n).flatten = ls.flatten.take (ls.cumLen n) :=
   (flatten_take_drop h_ls n).1
 
 theorem flatten_drop [Inhabited α]
-    {ls : ωSequence (List α)} (h_ls : ∀ k, (ls k).length > 0) (n : ℕ) :
+    {ls : ωSequence (List α)} (h_ls : ∀ k, 0 < (ls k).length) (n : ℕ) :
     (ls.drop n).flatten = ls.flatten.drop (ls.cumLen n) :=
   (flatten_take_drop h_ls n).2
 
 /-- `ls n` is the segment from position `ls.cumLen n` to position `ls.cumLen (n + 1) - 1`
 of `ls.flatten` -/
 @[simp, scoped grind =]
-theorem extract_flatten [Inhabited α] {ls : ωSequence (List α)} (h_ls : ∀ k, (ls k).length > 0)
+theorem extract_flatten [Inhabited α] {ls : ωSequence (List α)} (h_ls : ∀ k, 0 < (ls k).length)
     (n : ℕ) : ls.flatten.extract (ls.cumLen n) (ls.cumLen (n + 1)) = ls n := by
-  have h_ls' : ∀ k, (ls.drop n k).length > 0 := by grind
+  have h_ls' : ∀ k, 0 < (ls.drop n k).length := by grind
   have h_drop := flatten_drop h_ls n
   have h_take := flatten_take h_ls' 1
   grind [extract_eq_drop_take]
 
 /-- Distributivity of "forall" over `flatten`. -/
-theorem forall_flatten_iff [Inhabited α] {ls : ωSequence (List α)} (h_ls : ∀ k, (ls k).length > 0)
+theorem forall_flatten_iff [Inhabited α] {ls : ωSequence (List α)} (h_ls : ∀ k, 0 < (ls k).length)
     (p : α → Prop) : (∀ n, p (ls.flatten n)) ↔ ∀ k, (ls k).Forall p := by
   constructor
   · simp only [List.forall_iff_forall_mem, List.forall_mem_iff_getElem, ← extract_flatten h_ls]
